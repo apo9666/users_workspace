@@ -1,5 +1,6 @@
-use crate::port::credential_repository::{Credential, CredentialRepository};
 use std::sync::Arc;
+use bcrypt::{DEFAULT_COST, hash, verify};
+use crate::port::credential_repository::{Credential, CredentialRepository};
 
 pub struct Auth {
     credential_repository: Arc<dyn CredentialRepository>,
@@ -13,7 +14,12 @@ impl Auth {
     }
 
     pub async fn signup(&self, credential: &Credential) -> Result<(), Box<dyn std::error::Error>> {
-        self.credential_repository.save(credential).await.unwrap();
+        let cred = Credential {
+            username: credential.username.clone(),
+            password: hash(&credential.password, DEFAULT_COST)?,
+        };
+
+        self.credential_repository.save(&cred).await.unwrap();
         Ok(())
     }
 
@@ -27,7 +33,8 @@ impl Auth {
             .find_username(username.to_string())
             .await?
         {
-            Ok(stored_password == password)
+            let valid = verify(password, &stored_password)?;
+            Ok(valid)
         } else {
             Ok(false)
         }

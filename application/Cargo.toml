@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 async-trait = "0.1.89"
+bcrypt = "0.17.1"
