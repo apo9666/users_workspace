@@ -5,6 +5,8 @@ edition = "2024"
 
 [dependencies]
 memory = { path = "../memory" }
+jwt_auth_tokens = { path = "../jwt_auth_tokens" }
 application = { path = "../application" }
 tokio = { version = "1.48.0", features = ["full"] }
+env_logger = "0.11.8"
 

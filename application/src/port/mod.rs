@@ -1,2 +1,2 @@
 pub mod credential_repository;
-pub mod repository_error;
+pub mod for_auth_tokens;

@@ -1,27 +1,27 @@
-use crate::port::credential_repository::{Credential, CredentialRepository};
+use crate::{
+    domain::{claims::Claims, credential::Credential},
+    port::{
+        credential_repository::CredentialRepository,
+        for_auth_tokens::{self, ForAuthTokens},
+    },
+};
 use bcrypt::{DEFAULT_COST, hash, verify};
-use jsonwebtoken::{EncodingKey, Header, encode};
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct Auth {
     credential_repository: Arc<dyn CredentialRepository>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-struct Claims {
-    // aud: String, // Optional. Audience
-    exp: usize, // Required (validate_exp defaults to true in validation). Expiration time (as UTC timestamp)
-    // iat: usize, // Optional. Issued at (as UTC timestamp)
-    // iss: String, // Optional. Issuer
-    // nbf: usize,  // Optional. Not Before (as UTC timestamp)
-    sub: String, // Optional. Subject (whom token refers to)
+    for_auth_tokens: Arc<dyn ForAuthTokens>,
 }
 
 impl Auth {
-    pub fn new(credential_repository: Arc<dyn CredentialRepository>) -> Self {
+    pub fn new(
+        credential_repository: Arc<dyn CredentialRepository>,
+        for_auth_tokens: Arc<dyn ForAuthTokens>,
+    ) -> Self {
         Self {
             credential_repository,
+            for_auth_tokens,
         }
     }
 
@@ -38,27 +38,27 @@ impl Auth {
     pub async fn login(
         &self,
         username: &str,
-        password: &str,
+        _password: &str,
     ) -> Result<String, Box<dyn std::error::Error>> {
-        if let Some(stored_password) = self
+        if let Some(_stored_password) = self
             .credential_repository
             .find_username(username.to_string())
             .await?
         {
-            let valid = verify(password, &stored_password)?;
-            if valid {
-                let my_claims = Claims {
-                    sub: "b@b.com".to_owned(),
-                    exp: 10000000000,
-                };
-                let token = encode(
-                    &Header::default(),
-                    &my_claims,
-                    &EncodingKey::from_secret("secret".as_ref()),
-                )?;
-                return Ok(token);
-            }
-            Ok("".to_string())
+            let start = SystemTime::now();
+            let since_the_epoch = start
+                .duration_since(UNIX_EPOCH)
+                .expect("time should go forward");
+            let exp = (since_the_epoch.as_secs() + 600) as usize; // 10 minutes from now
+            let token = self
+                .for_auth_tokens
+                .create_token(Claims {
+                    sub: username.to_string(),
+                    exp,
+                })
+                .await?;
+            self.for_auth_tokens.validate_token(&token).await?;
+            return Ok(token);
         } else {
             Ok("".to_string())
         }

@@ -1,5 +1,5 @@
-use application::port::credential_repository::{Credential, CredentialRepository};
-use application::port::repository_error::RepositoryError;
+use application::domain::credential::Credential;
+use application::port::credential_repository::{CredentialRepository, CredentialRepositoryError};
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -19,20 +19,21 @@ impl MemoryCredentialRepository {
 
 #[async_trait]
 impl CredentialRepository for MemoryCredentialRepository {
-    async fn save(&self, credential: &Credential) -> Result<(), RepositoryError> {
-        let mut repositories = self
-            .credentials
-            .lock()
-            .map_err(|e| RepositoryError::ConnectionError(format!("Mutex poisoned: {}", e)))?;
+    async fn save(&self, credential: &Credential) -> Result<(), CredentialRepositoryError> {
+        let mut repositories = self.credentials.lock().map_err(|e| {
+            CredentialRepositoryError::ConnectionError(format!("Mutex poisoned: {}", e))
+        })?;
         repositories.insert(credential.username.clone(), credential.password.clone());
         Ok(())
     }
 
-    async fn find_username(&self, username: String) -> Result<Option<String>, RepositoryError> {
-        let repositories = self
-            .credentials
-            .lock()
-            .map_err(|e| RepositoryError::ConnectionError(format!("Mutex poisoned: {}", e)))?;
+    async fn find_username(
+        &self,
+        username: String,
+    ) -> Result<Option<String>, CredentialRepositoryError> {
+        let repositories = self.credentials.lock().map_err(|e| {
+            CredentialRepositoryError::ConnectionError(format!("Mutex poisoned: {}", e))
+        })?;
         Ok(repositories.get(&username).cloned())
     }
 }
