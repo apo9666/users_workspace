@@ -1,0 +1,27 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Rust source files
+[*.{rs,ron}]
+indent_style = space
+indent_size = 4
+
+# TOML (Cargo.toml, rust-toolchain, etc.)
+[*.toml]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
+
+# Do not trim trailing whitespace in Markdown or other docs
+[*.md]
+trim_trailing_whitespace = false
+
+# Makefiles must use tabs
+[Makefile]
+indent_style = tab
+trim_trailing_whitespace = false
