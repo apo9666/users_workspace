@@ -15,6 +15,9 @@ pub enum AuthTokenError {
 
     #[error("The token signature is invalid.")]
     InvalidSignature,
+
+    #[error("Failed to fetch JWKs for token validation.")]
+    JwkFetchError,
 }
 
 #[async_trait]
