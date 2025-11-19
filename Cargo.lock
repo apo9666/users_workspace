@@ -537,10 +537,16 @@ version = "0.1.0"
 dependencies = [
  "application",
  "async-trait",
+ "base64ct",
  "ed25519-dalek",
  "jsonwebtoken",
  "log",
+ "once_cell",
+ "pem",
  "rand_core",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
