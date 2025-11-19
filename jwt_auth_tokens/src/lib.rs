@@ -96,4 +96,13 @@ impl ForAuthTokens for JwtAuthTokens {
 
         Ok(claims.claims)
     }
+
+    async fn get_jwks(&self) -> Result<String, AuthTokenError> {
+        let jwks = read_public::build_jwks_from_dir("./ed25519").await?;
+        let jwks_json = serde_json::to_string(&jwks).map_err(|err| {
+            error!("Failed to serialize JWKs to JSON: {}", err);
+            AuthTokenError::JwksFetchError
+        })?;
+        Ok(jwks_json)
+    }
 }

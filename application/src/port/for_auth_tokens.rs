@@ -17,11 +17,12 @@ pub enum AuthTokenError {
     InvalidSignature,
 
     #[error("Failed to fetch JWKs for token validation.")]
-    JwkFetchError,
+    JwksFetchError,
 }
 
 #[async_trait]
 pub trait ForAuthTokens {
     async fn create_token(&self, claims: Claims) -> Result<String, AuthTokenError>;
     async fn validate_token(&self, token: &str) -> Result<Claims, AuthTokenError>;
+    async fn get_jwks(&self) -> Result<String, AuthTokenError>;
 }

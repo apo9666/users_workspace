@@ -33,12 +33,12 @@ pub async fn build_jwks_from_dir(dir: &str) -> Result<JwkSet, AuthTokenError> {
 
     let mut rd = fs::read_dir(dir).await.map_err(|err| {
         error!("Failed to read public directory: {}", err);
-        AuthTokenError::JwkFetchError
+        AuthTokenError::JwksFetchError
     })?;
 
     while let Some(entry) = rd.next_entry().await.map_err(|err| {
         error!("Failed to read directory entry: {}", err);
-        AuthTokenError::JwkFetchError
+        AuthTokenError::JwksFetchError
     })? {
         let path = entry.path();
 
@@ -57,7 +57,7 @@ pub async fn build_jwks_from_dir(dir: &str) -> Result<JwkSet, AuthTokenError> {
         let kid = fname.trim_end_matches("_public.pem").to_string();
         let pem = fs::read_to_string(&path).await.map_err(|err| {
             error!("Failed to read public PEM file {:?}: {}", path, err);
-            AuthTokenError::JwkFetchError
+            AuthTokenError::JwksFetchError
         })?;
         let b64 = pem
             .lines()
@@ -68,7 +68,7 @@ pub async fn build_jwks_from_dir(dir: &str) -> Result<JwkSet, AuthTokenError> {
                 "Failed to decode base64 content of PEM file {:?}: {}",
                 path, err
             );
-            AuthTokenError::JwkFetchError
+            AuthTokenError::JwksFetchError
         })?;
         let public_key = &der[der.len() - 32..];
         let x = Base64UrlUnpadded::encode_string(public_key);
