@@ -8,4 +8,5 @@ pub struct Claims {
     // iss: String, // Optional. Issuer
     // nbf: usize,  // Optional. Not Before (as UTC timestamp)
     pub sub: String, // Optional. Subject (whom token refers to)
+    pub token_type: String,
 }

@@ -24,5 +24,6 @@ async fn main() {
         .await
         .unwrap();
 
-    println!("{}", result);
+    println!("{}", result.access_token);
+    println!("{}", result.refresh_token);
 }
