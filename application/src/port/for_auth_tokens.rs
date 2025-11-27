@@ -23,6 +23,10 @@ pub enum AuthTokenError {
 #[async_trait]
 pub trait ForAuthTokens {
     async fn create_token(&self, claims: Claims) -> Result<String, AuthTokenError>;
-    async fn validate_token(&self, token: &str) -> Result<Claims, AuthTokenError>;
+    async fn validate_token(
+        &self,
+        token: String,
+        token_type: String,
+    ) -> Result<Claims, AuthTokenError>;
     async fn get_jwks(&self) -> Result<String, AuthTokenError>;
 }

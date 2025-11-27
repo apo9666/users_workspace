@@ -22,9 +22,9 @@ impl Error for CredentialRepositoryError {}
 
 #[async_trait]
 pub trait CredentialRepository: Send + Sync {
-    async fn save(&self, credential: &Credential) -> Result<(), CredentialRepositoryError>;
+    async fn save(&self, credential: Credential) -> Result<(), CredentialRepositoryError>;
     async fn find_username(
         &self,
         username: String,
-    ) -> Result<Option<String>, CredentialRepositoryError>;
+    ) -> Result<Option<Credential>, CredentialRepositoryError>;
 }

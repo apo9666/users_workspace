@@ -3,8 +3,10 @@ use application::{
     port::for_auth_tokens::{AuthTokenError, ForAuthTokens},
 };
 use async_trait::async_trait;
-use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Validation, decode, encode};
-use log::error;
+use jsonwebtoken::{
+    Algorithm, DecodingKey, EncodingKey, Validation, dangerous::insecure_decode, decode, encode,
+};
+use log::{error, warn};
 
 mod read_key;
 mod read_public;
@@ -45,9 +47,30 @@ impl ForAuthTokens for JwtAuthTokens {
         Ok(token)
     }
 
-    async fn validate_token(&self, token: &str) -> Result<Claims, AuthTokenError> {
+    async fn validate_token(
+        &self,
+        token: String,
+        token_type: String,
+    ) -> Result<Claims, AuthTokenError> {
+        let claims = insecure_decode::<Claims>(&token)
+            .map_err(|err| match *err.kind() {
+                jsonwebtoken::errors::ErrorKind::InvalidToken => AuthTokenError::InvalidToken,
+                _ => {
+                    warn!("An error occurred while decoding the token body: {}", err);
+                    AuthTokenError::InvalidToken
+                }
+            })?
+            .claims;
+        if claims.token_type != token_type {
+            warn!(
+                "Token type mismatch: expected {}, found {}",
+                claims.token_type, token_type
+            );
+            return Err(AuthTokenError::InvalidToken);
+        }
+
         let kid = {
-            let header = jsonwebtoken::decode_header(token).map_err(|err| match *err.kind() {
+            let header = jsonwebtoken::decode_header(&token).map_err(|err| match *err.kind() {
                 jsonwebtoken::errors::ErrorKind::InvalidToken => AuthTokenError::InvalidToken,
                 _ => {
                     error!("An error occurred while decoding the token header: {}", err);
