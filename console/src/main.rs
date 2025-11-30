@@ -1,4 +1,4 @@
-use application::{auth::Auth, domain::credential::Credential};
+use application::auth::Auth;
 use env_logger::{Builder, Target};
 use jwt_auth_tokens::JwtAuthTokens;
 use memory::repository::credential::MemoryCredentialRepository;
@@ -19,13 +19,9 @@ async fn main() {
         totp.clone(),
     );
 
-    auth.signup(&Credential {
-        username: "user1".to_string(),
-        password: "password123".to_string(),
-        otp_secret: None,
-    })
-    .await
-    .unwrap();
+    auth.signup("user1".to_string(), "password123".to_string())
+        .await
+        .unwrap();
 
     let result = auth
         .login("user1".to_string(), "password123".to_string())

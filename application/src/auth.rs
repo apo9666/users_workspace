@@ -8,6 +8,7 @@ use crate::{
 use bcrypt::{DEFAULT_COST, hash, verify};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
+use uuid::Uuid;
 
 pub struct LoginResult {
     pub mfa_token: Option<String>,
@@ -34,10 +35,15 @@ impl Auth {
         }
     }
 
-    pub async fn signup(&self, credential: &Credential) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn signup(
+        &self,
+        username: String,
+        password: String,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let cred = Credential {
-            username: credential.username.clone(),
-            password: hash(&credential.password, DEFAULT_COST)?,
+            id: Uuid::new_v4(),
+            username: username,
+            password: hash(password, DEFAULT_COST)?,
             otp_secret: None,
         };
 
