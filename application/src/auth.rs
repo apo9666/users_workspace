@@ -1,14 +1,24 @@
 use crate::{
-    domain::{claims::Claims, credential::Credential},
+    domain::{claims::Claims, user::User},
     port::{
-        credential_repository::CredentialRepository, for_auth_tokens::ForAuthTokens,
-        for_totp::ForTotp,
+        for_auth_tokens::ForAuthTokens, for_totp::ForTotp, hsm_store::HSMStore,
+        user_repository::UserRepository,
     },
 };
 use bcrypt::{DEFAULT_COST, hash, verify};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
+use webauthn_rs::{
+    Webauthn,
+    prelude::{
+        PasskeyAuthentication, PasskeyRegistration, PublicKeyCredential,
+        RegisterPublicKeyCredential,
+    },
+};
+
+const WEBAUTHN_REG_STATE: &str = "webauthn/reg/state";
+const WEBAUTHN_AUTH_STATE: &str = "webauthn/auth/state";
 
 pub struct LoginResult {
     pub mfa_token: Option<String>,
@@ -17,37 +27,39 @@ pub struct LoginResult {
 }
 
 pub struct Auth {
-    credential_repository: Arc<dyn CredentialRepository>,
+    user_repository: Arc<dyn UserRepository>,
     for_auth_tokens: Arc<dyn ForAuthTokens>,
     for_totp: Arc<dyn ForTotp>,
+    hsm_store: Arc<dyn HSMStore>,
+    webauthn: Arc<Webauthn>,
 }
 
 impl Auth {
     pub fn new(
-        credential_repository: Arc<dyn CredentialRepository>,
+        user_repository: Arc<dyn UserRepository>,
         for_auth_tokens: Arc<dyn ForAuthTokens>,
         for_totp: Arc<dyn ForTotp>,
+        hsm_store: Arc<dyn HSMStore>,
+        webauthn: Arc<Webauthn>,
     ) -> Self {
         Self {
-            credential_repository,
+            user_repository,
             for_auth_tokens,
             for_totp,
+            hsm_store,
+            webauthn,
         }
     }
 
     pub async fn signup(
         &self,
+        name: String,
         username: String,
         password: String,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let cred = Credential {
-            id: Uuid::new_v4(),
-            username: username,
-            password: hash(password, DEFAULT_COST)?,
-            otp_secret: None,
-        };
+        let cred = User::new(username, name, hash(password, DEFAULT_COST)?);
 
-        self.credential_repository.save(cred).await.unwrap();
+        self.user_repository.save(cred).await.unwrap();
         Ok(())
     }
 
@@ -56,13 +68,11 @@ impl Auth {
         username: String,
         password: String,
     ) -> Result<LoginResult, Box<dyn std::error::Error>> {
-        let Some(credential) = self
-            .credential_repository
+        let credential = self
+            .user_repository
             .find_username(username.clone())
             .await?
-        else {
-            return Err("Invalid username or password".to_string().into());
-        };
+            .ok_or_else(|| "Invalid username or password".to_string())?;
 
         if !verify(password, &credential.password)? {
             return Err("Invalid username or password".into());
@@ -127,8 +137,7 @@ impl Auth {
             .validate_token(mfa_token, "access".to_string())
             .await?;
 
-        let Some(mut credential) = self.credential_repository.find_username(claims.sub).await?
-        else {
+        let Some(mut credential) = self.user_repository.find_username(claims.sub).await? else {
             return Err("Invalid username or password".to_string().into());
         };
 
@@ -138,8 +147,115 @@ impl Auth {
             .await?;
 
         credential.otp_secret = Some(secret);
-        self.credential_repository.save(credential).await?;
+        self.user_repository.save(credential).await?;
 
         Ok(auth_url)
+    }
+
+    pub async fn start_passkey_registration(
+        &self,
+        user_id: Uuid,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        let Some(user) = self.user_repository.find_id(user_id).await? else {
+            return Err("Credential not found".into());
+        };
+        self.hsm_store.set(user.id, WEBAUTHN_REG_STATE, "")?;
+        let credential_ids = user.pass_keys.iter().map(|k| k.cred_id().clone()).collect();
+
+        let (ccr, reg_state) = self
+            .webauthn
+            .start_passkey_registration(user_id, &user.username, &user.name, Some(credential_ids))
+            .expect("Failed to start registration.");
+
+        let json_reg_state = serde_json::to_string(&reg_state)?;
+        self.hsm_store
+            .set(user.id, WEBAUTHN_REG_STATE, &json_reg_state)?;
+
+        let ccr = serde_json::to_string(&ccr)?;
+
+        return Ok(ccr);
+    }
+
+    pub async fn finish_passkey_registration(
+        &self,
+        user_id: Uuid,
+        req: RegisterPublicKeyCredential,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let reg_state_str = self
+            .hsm_store
+            .get(user_id, WEBAUTHN_REG_STATE)?
+            .ok_or_else(|| "could not find webauthn registration key".to_string())?;
+
+        let reg_state: PasskeyRegistration = serde_json::from_str(&reg_state_str)?;
+        self.hsm_store.set(user_id, WEBAUTHN_REG_STATE, "")?;
+
+        let sk = self
+            .webauthn
+            .finish_passkey_registration(&req, &reg_state)?;
+
+        let mut user = self
+            .user_repository
+            .find_id(user_id)
+            .await?
+            .ok_or_else(|| "user not found".to_string())?;
+
+        user.pass_keys.push(sk);
+        self.user_repository.save(user).await?;
+
+        Ok(())
+    }
+
+    pub async fn start_passkey_authentication(
+        &self,
+        user_id: Uuid,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        self.hsm_store.set(user_id, WEBAUTHN_AUTH_STATE, "")?;
+        let user = self
+            .user_repository
+            .find_id(user_id)
+            .await?
+            .ok_or_else(|| "user not found".to_string())?;
+
+        let (rcr, auth_state) = self
+            .webauthn
+            .start_passkey_authentication(&user.pass_keys)?;
+
+        let json_auth_state = serde_json::to_string(&auth_state)?;
+        self.hsm_store
+            .set(user_id, WEBAUTHN_AUTH_STATE, &json_auth_state)?;
+
+        let rcr = serde_json::to_string(&rcr)?;
+        Ok(rcr)
+    }
+
+    pub async fn finish_passkey_authentication(
+        &self,
+        user_id: Uuid,
+        auth: PublicKeyCredential,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let auth_state_str = self
+            .hsm_store
+            .get(user_id, WEBAUTHN_AUTH_STATE)?
+            .ok_or_else(|| "could not find webauthn registration key".to_string())?;
+
+        self.hsm_store.set(user_id, WEBAUTHN_AUTH_STATE, "")?;
+        let auth_state: PasskeyAuthentication = serde_json::from_str(&auth_state_str)?;
+
+        let auth_result = self
+            .webauthn
+            .finish_passkey_authentication(&auth, &auth_state)?;
+
+        let mut user = self
+            .user_repository
+            .find_id(user_id)
+            .await?
+            .ok_or_else(|| "user not found".to_string())?;
+
+        user.pass_keys.iter_mut().for_each(|k| {
+            k.update_credential(&auth_result);
+        });
+        self.user_repository.save(user).await?;
+
+        Ok(())
     }
 }
