@@ -1,0 +1,420 @@
+// ============================================================================
+// Variables
+// ============================================================================
+
+$primary-color: #2b6cb0; // muted blue
+$secondary-color: #4a5568; // slate gray
+$dark-text: #1f2937; // dark slate
+$medium-text: #4b5563;
+$light-text: #9ca3af;
+$border-color: #e6e9ee;
+$background-light: #f5f7fa;
+$white: #ffffff;
+
+$info-bg: #eef2ff;
+$info-color: #334155;
+
+$primary-gradient: $primary-color;
+
+$font-stack: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+
+$border-radius-sm: 6px;
+$border-radius-md: 12px;
+
+$transition-speed: 0.3s;
+$transition-timing: ease;
+
+// ============================================================================
+// Mixins
+// ============================================================================
+@mixin flex-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+@mixin text-uppercase {
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+@mixin button-hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba($primary-color, 0.3);
+}
+
+@mixin input-focus {
+    outline: none;
+    border-color: $primary-color;
+    background: $white;
+    box-shadow: 0 0 0 4px rgba($primary-color, 0.1);
+}
+
+@mixin transition($property: all) {
+    transition: $property $transition-speed $transition-timing;
+}
+
+@mixin mobile-only {
+    @media (max-width: 600px) {
+        @content;
+    }
+}
+
+// ============================================================================
+// Global Styles
+// ============================================================================
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: $font-stack;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    margin: 0;
+    background: $background-light;
+    color: $dark-text;
+}
+
+/* Make inputs/labels readable even if HTML pages don't use our utility classes */
+input,
+textarea,
+button,
+select {
+    font-family: inherit;
+}
+
+label {
+    color: $medium-text;
+}
+
+input,
+textarea {
+    color: $dark-text;
+}
+
+// ============================================================================
+// Animations
+// ============================================================================
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+// ============================================================================
+// Login Container
+// ============================================================================
+.login-container {
+    width: 100%;
+    max-width: 480px;
+    margin: 40px auto;
+    padding: 16px;
+}
+
+.login-box {
+    background: $white;
+    padding: 32px;
+    border-radius: $border-radius-sm;
+    box-shadow: 0 2px 8px rgba(16, 24, 40, 0.06);
+    animation: fadeIn 0.25s ease-out;
+
+    @include mobile-only {
+        padding: 22px;
+    }
+}
+
+/* ensure content inside login-box has explicit readable color */
+.login-box,
+.login-box * {
+    color: $dark-text;
+}
+
+// ============================================================================
+// Typography
+// ============================================================================
+h1 {
+    text-align: center;
+    color: $dark-text;
+    margin: 0 0 20px 0;
+    font-size: 22px;
+    font-weight: 600;
+
+    @include mobile-only {
+        font-size: 20px;
+    }
+}
+
+// ============================================================================
+// Form Styles
+// ============================================================================
+.form-group {
+    margin-bottom: 18px;
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        color: $medium-text;
+        font-weight: 500;
+        font-size: 13px;
+        text-transform: none; // keep normal case for neutrality
+    }
+}
+
+.form-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid $border-color;
+    border-radius: 8px;
+    font-size: 14px;
+    @include transition;
+    background: $white;
+
+    &:focus {
+        outline: none;
+        border-color: darken($primary-color, 5%);
+        box-shadow: 0 0 0 4px rgba(43,108,176, 0.06);
+    }
+
+    &::placeholder {
+        color: $light-text;
+        opacity: 1;
+    }
+
+    @include mobile-only {
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+}
+
+/* Fallback rules for plain inputs that may not have .form-input class */
+input::placeholder {
+    color: $light-text;
+}
+
+/* make labels more prominent on small screens */
+@media (max-width: 600px) {
+    .form-group label {
+        font-size: 14px;
+    }
+}
+
+// ============================================================================
+// Button Styles
+// ============================================================================
+.login-btn {
+    width: 100%;
+    padding: 12px;
+    background: $primary-color;
+    color: $white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    @include transition;
+    text-transform: none;
+
+    &:hover {
+        filter: brightness(0.98);
+        box-shadow: 0 6px 18px rgba(16,24,40,0.06);
+    }
+
+    &:active {
+        transform: translateY(0);
+    }
+
+    @include mobile-only {
+        padding: 10px;
+        font-size: 14px;
+    }
+}
+
+// ============================================================================
+// Status Message
+// ============================================================================
+.status-message {
+    margin-top: 16px;
+    padding: 12px;
+    text-align: center;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    animation: fadeIn 0.2s ease-out;
+    background: $info-bg;
+    color: $info-color;
+    border-left: 4px solid rgba(51,65,85,0.12);
+}
+
+/* --------------------------------------------------------------------------
+   Header / Theme toggle
+   -------------------------------------------------------------------------- */
+.app-header {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 12px 16px;
+}
+
+.theme-toggle {
+    appearance: none;
+    border: 1px solid $border-color;
+    background: transparent;
+    color: $dark-text;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    @include transition;
+}
+
+.theme-toggle:hover {
+    box-shadow: 0 6px 18px rgba(16,24,40,0.04);
+}
+
+/* --------------------------------------------------------------------------
+   Dark theme overrides (toggle by setting `data-theme="dark"` on <html>)
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] {
+    background: #0f1724; // very dark
+    color: #e6eef8;
+}
+
+html[data-theme="dark"] body {
+    background: #0b1220;
+    color: #e6eef8;
+}
+
+html[data-theme="dark"] .login-box {
+    background: #0b1220;
+    box-shadow: 0 6px 24px rgba(2,6,23,0.6);
+}
+
+html[data-theme="dark"] .form-input {
+    background: #0f1724;
+    border-color: #21303f;
+    color: #e6eef8;
+}
+
+/* make sure plain inputs are also readable */
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea {
+    color: #e6eef8;
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder,
+html[data-theme="dark"] .form-input::placeholder {
+    color: rgba(230,238,248,0.6);
+}
+
+html[data-theme="dark"] .login-btn {
+    background: #1f6feb;
+    color: #fff;
+}
+
+html[data-theme="dark"] .theme-toggle {
+    border-color: rgba(255,255,255,0.06);
+    color: #e6eef8;
+    background: rgba(255,255,255,0.02);
+}
+
+html[data-theme="dark"] .status-message {
+    background: rgba(255,255,255,0.03);
+    color: #cfe3ff;
+    border-left-color: rgba(255,255,255,0.06);
+}
+
+/* Dark theme labels and headings */
+html[data-theme="dark"] label,
+html[data-theme="dark"] h1,
+html[data-theme="dark"] .login-box,
+html[data-theme="dark"] .login-box * {
+    color: #e6eef8;
+}
+
+.darkmode-toggle{
+    label {
+        width:100px;
+        height:40px;
+        position: relative;
+        display: block;
+        background: #ebebeb;
+        border-radius: 40px;
+        box-shadow: inset 0px 5px 15px rgba(0,0,0,0.4), inset 0px -5px 15px rgba(255,255,255,0.4);
+        cursor: pointer;
+        transition: 0.3s;
+    }
+    label:after {
+        content: "";
+        width:36px;
+        height: 36px;
+        position: absolute;
+        top:2px;
+        left:2px;
+        background: linear-gradient(180deg,#ffcc89,#d8860b);
+        border-radius: 36px;
+        box-shadow: 0px 5px 10px rgba(0,0,0,0.2);
+        transition: 0.3s;
+    }
+    input {
+        width: 0;
+        height: 0;
+        visibility: hidden;
+    }
+    input:checked + label {
+        background: #0b1220;
+    }
+    input:checked + label:after {
+        left:98px;
+        transform: translateX(-100%);
+        background: linear-gradient(180deg,#777,#3a3a3a);
+    }
+    label:active:after{
+        width: 52px;
+    }
+
+    input:checked + label + .background {
+        background:#0b1220;
+    }
+    label svg {
+        position: absolute;
+        width: 24px;
+        top:8px;
+        z-index: 20;
+    }
+    label svg.sun {
+        left:8px;
+        fill:#fff;
+        transition: 0.3s;
+    }
+    label svg.moon {
+        left:68px;
+        fill:#7e7e7e;
+        transition: 0.3s;
+    }
+    input:checked + label svg.sun {
+        fill:#7e7e7e;
+    }
+    input:checked + label svg.moon {
+        fill:#fff;
+    }
+}
