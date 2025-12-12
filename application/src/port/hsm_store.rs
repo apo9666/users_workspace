@@ -17,7 +17,7 @@ impl std::fmt::Display for HSMStoreError {
 impl std::error::Error for HSMStoreError {}
 
 #[async_trait]
-pub trait HSMStore {
+pub trait HSMStore: Send + Sync {
     fn get(&self, user_id: Uuid, key: &str) -> Result<Option<String>, HSMStoreError>;
     fn set(&self, user_id: Uuid, key: &str, value: &str) -> Result<(), HSMStoreError>;
 }

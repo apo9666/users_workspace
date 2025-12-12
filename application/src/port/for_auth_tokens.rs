@@ -21,7 +21,7 @@ pub enum AuthTokenError {
 }
 
 #[async_trait]
-pub trait ForAuthTokens {
+pub trait ForAuthTokens: Send + Sync {
     async fn create_token(&self, claims: Claims) -> Result<String, AuthTokenError>;
     async fn validate_token(
         &self,
