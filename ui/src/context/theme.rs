@@ -31,8 +31,8 @@ fn set_theme(is_dark: bool) {
     }
 }
 
-#[component(ThemeProvider)]
-pub fn theme_provider(props: &ChildrenProps) -> Html {
+#[component]
+pub fn ThemeProvider(props: &ChildrenProps) -> Html {
     let is_dark = use_state(|| detect_system_preference());
 
     set_theme(*is_dark);

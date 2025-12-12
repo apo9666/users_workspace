@@ -1,8 +1,8 @@
 use crate::context::theme::ThemeState;
 use yew::prelude::*;
 
-#[component(DarkmodeToggle)]
-pub fn darkmode_toggle() -> Html {
+#[component]
+pub fn DarkmodeToggle() -> Html {
     let theme = use_context::<ThemeState>().expect("no ctx found");
 
     html! {
