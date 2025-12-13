@@ -6,6 +6,7 @@ use crate::context::theme::ThemeProvider;
 use crate::pages::home::HomePage;
 use crate::pages::login::LoginPage;
 use crate::pages::not_found::NotFoundPage;
+use crate::pages::signup::SignupPage;
 
 #[derive(Clone, Routable, PartialEq)]
 enum Route {
@@ -13,6 +14,8 @@ enum Route {
     Home,
     #[at("/login")]
     Login,
+    #[at("/signup")]
+    Signup,
     #[not_found]
     #[at("/404")]
     NotFound,
@@ -22,6 +25,9 @@ fn switch(routes: Route) -> Html {
     match routes {
         Route::Login => html! {
             <LoginPage />
+        },
+        Route::Signup => html! {
+            <SignupPage />
         },
         Route::Home => html! {
            <HomePage />
