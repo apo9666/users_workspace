@@ -2,7 +2,8 @@ use wasm_bindgen_futures::spawn_local;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
-use crate::services::auth::{SignupRequest, signup};
+use crate::services::auth::signup;
+use api_types::signup::SignupRequest;
 
 #[component]
 pub fn SignupPage() -> Html {

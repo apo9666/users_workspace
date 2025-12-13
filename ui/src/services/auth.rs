@@ -1,23 +1,5 @@
+use api_types::{login::LoginRequest, signup::SignupRequest};
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize)]
-pub struct LoginRequest {
-    pub email: String,
-    pub password: String,
-}
-
-#[derive(Serialize)]
-pub struct SignupRequest {
-    pub name: String,
-    pub email: String,
-    pub password: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ApiResponse {
-    pub message: Option<String>,
-}
 
 pub async fn login(req: LoginRequest) -> reqwest::Result<reqwest::Response> {
     let client = Client::new();
