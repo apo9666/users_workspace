@@ -1,3 +1,5 @@
+use api_types::login::LoginRequest;
+use validator::Validate;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
@@ -23,8 +25,31 @@ pub fn LoginPage() -> Html {
                 .and_then(|el| Some(el.value()))
                 .unwrap_or_default();
 
-            if email.is_empty() || password.is_empty() {
-                login_status.set("Por favor, preencha todos os campos".to_string());
+            // if email.is_empty() || password.is_empty() {
+            //     login_status.set("Por favor, preencha todos os campos".to_string());
+            //     return;
+            // }
+
+            let request = LoginRequest {
+                email: email.clone(),
+                password: password.clone(),
+            };
+
+            if let Err(err) = request.validate() {
+                // erros.field_errors() retorna um HashMap<&str, Vec<ValidationError>>
+                let mensagem = err.to_string();
+
+                // // Tenta pegar o primeiro erro do campo 'email'
+                // if let Some(erros_email) = err.field_errors().get("email") {
+                //     if let Some(erro) = erros_email.first() {
+                //         // Se você definiu 'message' na struct, ela aparece aqui
+                //         if let Some(msg) = &erro.message {
+                //             mensagem = msg.to_string();
+                //         }
+                //     }
+                // }
+
+                login_status.set(mensagem);
                 return;
             }
 
