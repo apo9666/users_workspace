@@ -7,12 +7,13 @@ use yew::prelude::*;
 use crate::{
     components::ui::input_field::{Field, InputField},
     services::auth::signup,
-    utils::validator::get_validation_errors,
+    utils::validator::{get_validation_errors, sync_field_error},
 };
 use api_types::signup::SignupRequest;
 
 #[function_component(SignupPage)]
 pub fn signup_page() -> Html {
+    let is_loading = use_state(|| false);
     let name = use_state(Field::default);
     let email = use_state(Field::default);
     let password = use_state(Field::default);
@@ -21,6 +22,7 @@ pub fn signup_page() -> Html {
     let server_error = use_state(|| String::new());
 
     let handle_signup = {
+        let is_loading = is_loading.clone();
         let name = name.clone();
         let email = email.clone();
         let password = password.clone();
@@ -28,6 +30,10 @@ pub fn signup_page() -> Html {
         let server_error = server_error.clone();
 
         move |_: MouseEvent| {
+            if *is_loading {
+                return;
+            }
+
             server_error.set("".to_string());
 
             let req = SignupRequest {
@@ -45,25 +51,18 @@ pub fn signup_page() -> Html {
                 error_map.insert("confirm".to_string(), "As senhas não conferem".to_string());
             }
 
-            let sync = |field_handle: &UseStateHandle<Field>, key: &str| {
-                let new_error = error_map.get(key).cloned();
-
-                if field_handle.error != new_error {
-                    let mut f = (**field_handle).clone();
-                    f.error = new_error;
-                    field_handle.set(f);
-                }
-            };
-
-            sync(&name, "name");
-            sync(&email, "email");
-            sync(&password, "password");
-            sync(&confirm, "confirm");
+            sync_field_error(&name, "name", &error_map);
+            sync_field_error(&email, "email", &error_map);
+            sync_field_error(&password, "password", &error_map);
+            sync_field_error(&confirm, "confirm", &error_map);
 
             if !error_map.is_empty() {
                 return;
             }
 
+            is_loading.set(true);
+
+            let is_loading = is_loading.clone();
             let server_error = server_error.clone();
             spawn_local(async move {
                 match signup(req).await {
@@ -73,6 +72,7 @@ pub fn signup_page() -> Html {
                     Ok(res) => server_error.set(format!("Erro no servidor: {}", res.status())),
                     Err(e) => server_error.set(format!("Erro de conexão: {}", e)),
                 }
+                is_loading.set(false);
             });
         }
     };
@@ -87,8 +87,13 @@ pub fn signup_page() -> Html {
                 <InputField label="Senha:" field={password} input_type="password" placeholder="Crie uma senha" />
                 <InputField label="Confirmar Senha:" field={confirm} input_type="password" placeholder="Crie uma senha" />
 
-                <button onclick={handle_signup} class="login-btn">
-                    {"Cadastrar"}
+                <button onclick={handle_signup} class={classes!("login-btn", (*is_loading).then(|| "btn-loading"))} disabled={*is_loading}>
+                    if *is_loading {
+                        <div class="spinner"></div>
+                        {" Enviando..."}
+                    } else {
+                        {"Cadastrar"}
+                    }
                 </button>
 
                 if !server_error.is_empty() {

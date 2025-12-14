@@ -243,10 +243,29 @@ input::placeholder {
     }
 }
 
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 // ============================================================================
 // Button Styles
 // ============================================================================
+
 .login-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.2s;
     width: 100%;
     padding: 12px;
     background: $primary-color;
@@ -266,6 +285,12 @@ input::placeholder {
 
     &:active {
         transform: translateY(0);
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not_allowed;
+        filter: grayscale(0.5);
     }
 
     @include mobile-only {
