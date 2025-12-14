@@ -29,15 +29,6 @@ pub fn signup_page() -> Html {
 
         move |_: MouseEvent| {
             server_error.set("".to_string());
-            let mut has_errors = false;
-
-            if (*password).value != (*confirm).value {
-                confirm.set(Field {
-                    value: (*confirm).value.clone(),
-                    error: Some("As senhas não conferem".to_string()),
-                });
-                has_errors = true;
-            }
 
             let req = SignupRequest {
                 name: (*name).value.clone(),
@@ -47,26 +38,29 @@ pub fn signup_page() -> Html {
 
             let mut error_map = match req.validate() {
                 Ok(_) => HashMap::new(),
-                Err(errs) => {
-                    has_errors = true;
-                    get_validation_errors(errs)
+                Err(errs) => get_validation_errors(errs),
+            };
+
+            if (*password).value != (*confirm).value {
+                error_map.insert("confirm".to_string(), "As senhas não conferem".to_string());
+            }
+
+            let sync = |field_handle: &UseStateHandle<Field>, key: &str| {
+                let new_error = error_map.get(key).cloned();
+
+                if field_handle.error != new_error {
+                    let mut f = (**field_handle).clone();
+                    f.error = new_error;
+                    field_handle.set(f);
                 }
             };
 
-            name.set(Field {
-                value: (*name).value.clone(),
-                error: error_map.remove("name"),
-            });
-            email.set(Field {
-                value: (*email).value.clone(),
-                error: error_map.remove("email"),
-            });
-            password.set(Field {
-                value: (*password).value.clone(),
-                error: error_map.remove("password"),
-            });
+            sync(&name, "name");
+            sync(&email, "email");
+            sync(&password, "password");
+            sync(&confirm, "confirm");
 
-            if has_errors {
+            if !error_map.is_empty() {
                 return;
             }
 
