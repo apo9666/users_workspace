@@ -5,7 +5,10 @@ use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
 use crate::{
-    components::ui::input_field::{Field, InputField},
+    components::ui::{
+        button::Button,
+        input_field::{Field, InputField},
+    },
     services::auth::signup,
     utils::validator::{get_validation_errors, sync_field_error},
 };
@@ -87,14 +90,7 @@ pub fn signup_page() -> Html {
                 <InputField label="Senha:" field={password} input_type="password" placeholder="Crie uma senha" />
                 <InputField label="Confirmar Senha:" field={confirm} input_type="password" placeholder="Crie uma senha" />
 
-                <button onclick={handle_signup} class={classes!("login-btn", (*is_loading).then(|| "btn-loading"))} disabled={*is_loading}>
-                    if *is_loading {
-                        <div class="spinner"></div>
-                        {" Enviando..."}
-                    } else {
-                        {"Cadastrar"}
-                    }
-                </button>
+                <Button label="Cadastrar" onclick={handle_signup} is_loading={*is_loading} />
 
                 if !server_error.is_empty() {
                     <p class="status-message">{ (*server_error).clone() }</p>

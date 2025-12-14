@@ -1,0 +1,39 @@
+@import "variables";
+@import "mixins";
+@import "base";
+
+// Layouts
+.login-container {
+    max-width: 440px;
+    margin: 60px auto;
+    padding: 0 20px;
+}
+
+.login-box {
+    background: var(--bg-card);
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    animation: fadeIn 0.4s ease-out;
+}
+
+.status-message {
+    margin-top: 20px;
+    padding: 12px;
+    background: var(--status-bg);
+    color: var(--status-text);
+    border-left: 4px solid var(--status-border);
+    border-radius: 4px;
+    text-align: center;
+}
+
+.app-header {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 12px 16px;
+}
+
+@import "components/ui/input";
+@import "components/ui/button";
+@import "components/ui/toggle";
