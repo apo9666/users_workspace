@@ -4,7 +4,7 @@ use wasm_bindgen_futures::spawn_local;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
-use crate::services::auth::signup;
+use crate::{components::ui::input_field::InputField, services::auth::signup};
 use api_types::signup::SignupRequest;
 
 #[function_component(SignupPage)]
@@ -92,33 +92,15 @@ pub fn signup_page() -> Html {
         }
     };
 
-    // Use AttrValue para evitar problemas de lifetime com o macro html!
-    let render_input_group = |label: &'static str,
-                              input_type: &'static str,
-                              placeholder: &'static str,
-                              n_ref: NodeRef,
-                              field_name: &'static str| {
-        let error_msg = field_errors.get(field_name).cloned();
-        let input_class = if error_msg.is_some() {
-            "form-input input-error"
-        } else {
-            "form-input"
-        };
-
-        html! {
-            <div class="form-group">
-                <label>{label}</label>
-                <input
-                    ref={n_ref}
-                    type={input_type}
-                    placeholder={placeholder} // Agora funciona porque é &'static str
-                    class={input_class}
-                />
-                if let Some(msg) = error_msg {
-                    <span class="error-message">{msg}</span>
-                }
-            </div>
-        }
+    let clear_error = |field: &'static str| {
+        let field_errors = field_errors.clone();
+        Callback::from(move |_: InputEvent| {
+            if field_errors.contains_key(field) {
+                let mut current = (*field_errors).clone();
+                current.remove(field);
+                field_errors.set(current);
+            }
+        })
     };
 
     html! {
@@ -126,10 +108,10 @@ pub fn signup_page() -> Html {
             <div class="login-box">
                 <h1>{"Criar Conta"}</h1>
 
-                { render_input_group("Nome:", "text", "Seu nome", name_ref, "name") }
-                { render_input_group("Email:", "email", "email@exemplo.com", email_ref, "email") }
-                { render_input_group("Senha:", "password", "Crie uma senha", password_ref, "password") }
-                { render_input_group("Confirmar Senha:", "password", "Repita sua senha", confirm_ref, "confirm") }
+                <InputField label="Nome:" input_type="text" placeholder="Seu nome" input_ref={name_ref.clone()} name="name" error={field_errors.get("name").cloned()} oninput={clear_error("name")} />
+                <InputField label="Email:" input_type="email" placeholder="email@exemplo.com" input_ref={email_ref.clone()} name="email" error={field_errors.get("email").cloned()} oninput={clear_error("email")} />
+                <InputField label="Senha:" input_type="password" placeholder="Crie uma senha" input_ref={password_ref.clone()} name="password" error={field_errors.get("password").cloned()} oninput={clear_error("password")} />
+                <InputField label="Confirmar Senha:" input_type="password" placeholder="Crie uma senha" input_ref={confirm_ref.clone()} name="confirm" error={field_errors.get("confirm").cloned()} oninput={clear_error("confirm")} />
 
                 <button onclick={handle_signup} class="login-btn">
                     {"Cadastrar"}
