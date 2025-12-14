@@ -1,35 +1,45 @@
 use yew::prelude::*;
 
+#[derive(Clone, PartialEq, Default)]
+pub struct Field {
+    pub value: String,
+    pub error: Option<String>,
+}
+
 #[derive(Properties, PartialEq)]
 pub struct InputFieldProps {
     pub label: &'static str,
     pub input_type: &'static str,
     pub placeholder: &'static str,
-    pub name: &'static str,
-    pub input_ref: NodeRef,
-    pub error: Option<String>,
-    // Adicionamos um callback opcional para limpar o erro ao digitar
-    #[prop_or_default]
-    pub oninput: Callback<InputEvent>,
+    pub field: UseStateHandle<Field>,
 }
 
 #[function_component(InputField)]
 pub fn input_field(props: &InputFieldProps) -> Html {
-    let has_error = props.error.is_some();
+    let oninput = {
+        let field = props.field.clone();
+        Callback::from(move |e: InputEvent| {
+            let input: web_sys::HtmlInputElement = e.target_unchecked_into();
+            field.set(Field {
+                value: input.value(),
+                error: None,
+            });
+        })
+    };
 
-    let input_class = classes!("form-input", has_error.then(|| "input-error"));
+    let has_error = props.field.error.is_some();
 
     html! {
         <div class="form-group">
             <label>{props.label}</label>
             <input
-                ref={props.input_ref.clone()}
                 type={props.input_type}
+                value={props.field.value.clone()}
+                oninput={oninput}
                 placeholder={props.placeholder}
-                class={input_class}
-                oninput={props.oninput.clone()}
+                class={classes!("form-input", has_error.then(|| "input-error"))}
             />
-            if let Some(msg) = &props.error {
+            if let Some(msg) = &props.field.error {
                 <span class="error-message">{msg}</span>
             }
         </div>
