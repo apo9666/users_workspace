@@ -17,6 +17,11 @@ indent_style = space
 indent_size = 2
 trim_trailing_whitespace = false
 
+# SCSS files
+[*.scss]
+indent_style = space
+indent_size = 2
+
 # Do not trim trailing whitespace in Markdown or other docs
 [*.md]
 trim_trailing_whitespace = false

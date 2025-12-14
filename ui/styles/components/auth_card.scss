@@ -1,0 +1,14 @@
+.auth-container {
+  width: 100%;
+  max-width: 480px;
+  margin: 40px auto;
+  padding: 16px;
+}
+
+.auth-box {
+  background: var(--bg-card);
+  padding: 22px;
+  border-radius: var(--radius-md, 12px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.25s ease-out;
+}

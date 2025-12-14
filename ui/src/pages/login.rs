@@ -1,117 +1,86 @@
+use std::collections::HashMap;
+
 use api_types::login::LoginRequest;
 use validator::Validate;
 use wasm_bindgen_futures::spawn_local;
-use web_sys::HtmlInputElement;
 use yew::prelude::*;
+
+use crate::{
+    components::{
+        auth_card::AuthCard,
+        ui::{
+            button::Button,
+            input_field::{Field, InputField},
+            server_error::ServerError,
+        },
+    },
+    services::auth::login,
+    utils::validator::{get_validation_errors, sync_field_error},
+};
 
 #[component]
 pub fn LoginPage() -> Html {
-    let email_ref = NodeRef::default();
-    let password_ref = NodeRef::default();
-    let login_status = use_state(|| String::new());
+    let is_loading = use_state(|| false);
+    let server_error = use_state(|| String::new());
+
+    let email = use_state(Field::default);
+    let password = use_state(Field::default);
 
     let handle_login = {
-        let email_ref = email_ref.clone();
-        let password_ref = password_ref.clone();
-        let login_status = login_status.clone();
+        let is_loading = is_loading.clone();
+        let server_error = server_error.clone();
+        let email = email.clone();
+        let password = password.clone();
 
         move |_: MouseEvent| {
-            let email = email_ref
-                .cast::<HtmlInputElement>()
-                .and_then(|el| Some(el.value()))
-                .unwrap_or_default();
-            let password = password_ref
-                .cast::<HtmlInputElement>()
-                .and_then(|el| Some(el.value()))
-                .unwrap_or_default();
+            if *is_loading {
+                return;
+            }
+            server_error.set("".to_string());
 
-            // if email.is_empty() || password.is_empty() {
-            //     login_status.set("Por favor, preencha todos os campos".to_string());
-            //     return;
-            // }
-
-            let request = LoginRequest {
-                email: email.clone(),
-                password: password.clone(),
+            let req = LoginRequest {
+                email: (*email).value.clone(),
+                password: (*password).value.clone(),
             };
 
-            if let Err(err) = request.validate() {
-                // erros.field_errors() retorna um HashMap<&str, Vec<ValidationError>>
-                let mensagem = err.to_string();
+            let error_map = match req.validate() {
+                Ok(_) => HashMap::new(),
+                Err(errs) => get_validation_errors(errs),
+            };
 
-                // // Tenta pegar o primeiro erro do campo 'email'
-                // if let Some(erros_email) = err.field_errors().get("email") {
-                //     if let Some(erro) = erros_email.first() {
-                //         // Se você definiu 'message' na struct, ela aparece aqui
-                //         if let Some(msg) = &erro.message {
-                //             mensagem = msg.to_string();
-                //         }
-                //     }
-                // }
+            sync_field_error(&email, "email", &error_map);
+            sync_field_error(&password, "password", &error_map);
 
-                login_status.set(mensagem);
+            if !error_map.is_empty() {
                 return;
             }
 
-            let login_status = login_status.clone();
+            is_loading.set(true);
+
+            let is_loading = is_loading.clone();
+            let server_error = server_error.clone();
 
             spawn_local(async move {
-                let client = reqwest::Client::new();
-                let body = serde_json::json!({
-                    "email": email,
-                    "password": password
-                });
-
-                match client
-                    .post("http://localhost:8080/login")
-                    .json(&body)
-                    .send()
-                    .await
-                {
-                    Ok(response) => {
-                        if response.status().is_success() {
-                            login_status.set(format!("Login bem-sucedido! Bem-vindo, {}", email));
-                        } else {
-                            login_status.set(format!("Erro no login: {}", response.status()));
-                        }
+                match login(req).await {
+                    Ok(res) if res.status().is_success() => {
+                        server_error.set(format!("Login com sucesso"));
                     }
-                    Err(e) => {
-                        login_status.set(format!("Erro na conexão: {}", e));
-                    }
+                    Ok(res) => server_error.set(format!("Erro no servidor: {}", res.status())),
+                    Err(e) => server_error.set(format!("Erro de conexão: {}", e)),
                 }
+                is_loading.set(false);
             });
         }
     };
 
     html! {
-        <div class="login-container">
-            <div class="login-box">
-                <h1>{"Login"}</h1>
-                <div class="form-group">
-                    <label>{"Email:"}</label>
-                    <input
-                        ref={email_ref.clone()}
-                        type="email"
-                        placeholder="seu@email.com"
-                        class="form-input"
-                    />
-                </div>
-                <div class="form-group">
-                    <label>{"Senha:"}</label>
-                    <input
-                        ref={password_ref.clone()}
-                        type="password"
-                        placeholder="Sua senha"
-                        class="form-input"
-                    />
-                </div>
-                <button onclick={handle_login} class="login-btn">
-                    {"Entrar"}
-                </button>
-                if !login_status.is_empty() {
-                    <p class="status-message">{ (*login_status).clone() }</p>
-                }
-            </div>
-        </div>
+        <AuthCard title="Login">
+            <InputField label="Email:" field={email} input_type="email" placeholder="email@exemplo.com" />
+            <InputField label="Senha:" field={password} input_type="password" placeholder="Sua senha" />
+
+            <Button label="Entrar" onclick={handle_login} is_loading={*is_loading} />
+
+            <ServerError message={(*server_error).clone()} />
+        </AuthCard>
     }
 }
