@@ -8,6 +8,7 @@ use crate::{
     components::ui::{
         button::Button,
         input_field::{Field, InputField},
+        server_error::ServerError,
     },
     services::auth::signup,
     utils::validator::{get_validation_errors, sync_field_error},
@@ -92,9 +93,7 @@ pub fn signup_page() -> Html {
 
                 <Button label="Cadastrar" onclick={handle_signup} is_loading={*is_loading} />
 
-                if !server_error.is_empty() {
-                    <p class="status-message">{ (*server_error).clone() }</p>
-                }
+                <ServerError message={(*server_error).clone()} />
             </div>
         </div>
     }

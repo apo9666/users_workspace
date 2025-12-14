@@ -1,7 +1,8 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
 
-use crate::components::ui::darkmode_toggle::DarkmodeToggle;
+use crate::components::layout::auth::AuthLayout;
+use crate::components::layout::main::MainLayout;
 use crate::context::theme::ThemeProvider;
 use crate::pages::home::HomePage;
 use crate::pages::login::LoginPage;
@@ -24,17 +25,21 @@ enum Route {
 fn switch(routes: Route) -> Html {
     match routes {
         Route::Login => html! {
-            <LoginPage />
+            <AuthLayout>
+                <LoginPage />
+            </AuthLayout>
         },
         Route::Signup => html! {
-            <SignupPage />
+            <AuthLayout>
+                <SignupPage />
+            </AuthLayout>
         },
         Route::Home => html! {
-           <HomePage />
+            <MainLayout>
+                <HomePage />
+            </MainLayout>
         },
-        Route::NotFound => html! {
-            <NotFoundPage />
-        },
+        Route::NotFound => html! { <NotFoundPage /> },
     }
 }
 
@@ -43,11 +48,8 @@ pub fn App() -> Html {
     html! {
         <>
             <ThemeProvider>
-                <header class="app-header">
-                    <DarkmodeToggle />
-                </header>
                 <BrowserRouter>
-                    <Switch<Route> render={switch} /> // <- must be child of <BrowserRouter>
+                    <Switch<Route> render={switch} />
                 </BrowserRouter>
             </ThemeProvider>
         </>

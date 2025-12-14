@@ -15,16 +15,11 @@
     border-radius: 12px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
     animation: fadeIn 0.4s ease-out;
-}
+    width: 100%;
 
-.status-message {
-    margin-top: 20px;
-    padding: 12px;
-    background: var(--status-bg);
-    color: var(--status-text);
-    border-left: 4px solid var(--status-border);
-    border-radius: 4px;
-    text-align: center;
+    @include mobile-only {
+        padding: 24px;
+    }
 }
 
 .app-header {
@@ -34,6 +29,8 @@
     padding: 12px 16px;
 }
 
+@import "components/layout/auth";
 @import "components/ui/input";
 @import "components/ui/button";
+@import "components/ui/server_error";
 @import "components/ui/toggle";
