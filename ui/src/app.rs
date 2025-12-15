@@ -3,14 +3,16 @@ use yew_router::prelude::*;
 
 use crate::components::layout::auth::AuthLayout;
 use crate::components::layout::main::MainLayout;
+use crate::components::protected_route::ProtectedRoute;
 use crate::context::theme::ThemeProvider;
+use crate::context::user::UserProvider;
 use crate::pages::home::HomePage;
 use crate::pages::login::LoginPage;
 use crate::pages::not_found::NotFoundPage;
 use crate::pages::signup::SignupPage;
 
 #[derive(Clone, Routable, PartialEq)]
-enum Route {
+pub enum Route {
     #[at("/")]
     Home,
     #[at("/login")]
@@ -36,7 +38,9 @@ fn switch(routes: Route) -> Html {
         },
         Route::Home => html! {
             <MainLayout>
-                <HomePage />
+                <ProtectedRoute>
+                    <HomePage />
+                </ProtectedRoute>
             </MainLayout>
         },
         Route::NotFound => html! { <NotFoundPage /> },
@@ -48,9 +52,11 @@ pub fn App() -> Html {
     html! {
         <>
             <ThemeProvider>
-                <BrowserRouter>
-                    <Switch<Route> render={switch} />
-                </BrowserRouter>
+                <UserProvider>
+                    <BrowserRouter>
+                        <Switch<Route> render={switch} />
+                    </BrowserRouter>
+                </UserProvider>
             </ThemeProvider>
         </>
     }

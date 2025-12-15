@@ -8,3 +8,10 @@ pub struct LoginRequest {
     #[validate(length(min = 8, message = "Senha deve ter pelo menos 8 caracteres"))]
     pub password: String,
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LoginResponse {
+    pub mfa_token: Option<String>,
+    pub access_token: Option<String>,
+    pub refresh_token: Option<String>,
+}

@@ -1,11 +1,17 @@
 use std::collections::HashMap;
 
 use api_types::login::LoginRequest;
+use serde::Deserialize;
 use validator::Validate;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
+use yew_router::{
+    Routable,
+    hooks::{use_location, use_navigator},
+};
 
 use crate::{
+    app::Route,
     components::{
         auth_card::AuthCard,
         ui::{
@@ -14,12 +20,21 @@ use crate::{
             server_error::ServerError,
         },
     },
+    context::user::{User, UserAction, UserContext},
     services::auth::login,
     utils::validator::{get_validation_errors, sync_field_error},
 };
 
+#[derive(Deserialize)]
+struct LoginQuery {
+    return_to: Option<String>,
+}
+
 #[component]
 pub fn LoginPage() -> Html {
+    let navigator = use_navigator().expect("Navigator not found");
+    let location = use_location().expect("Location not found");
+    let user_ctx = use_context::<UserContext>().expect("no user ctx found");
     let is_loading = use_state(|| false);
     let server_error = use_state(|| String::new());
 
@@ -27,6 +42,9 @@ pub fn LoginPage() -> Html {
     let password = use_state(Field::default);
 
     let handle_login = {
+        let navigator = navigator.clone();
+        let location = location.clone();
+        let user_ctx = user_ctx.clone();
         let is_loading = is_loading.clone();
         let server_error = server_error.clone();
         let email = email.clone();
@@ -59,14 +77,37 @@ pub fn LoginPage() -> Html {
 
             let is_loading = is_loading.clone();
             let server_error = server_error.clone();
+            let navigator = navigator.clone();
+            let location = location.clone();
+            let user_ctx = user_ctx.clone();
 
             spawn_local(async move {
                 match login(req).await {
-                    Ok(res) if res.status().is_success() => {
-                        server_error.set(format!("Login com sucesso"));
+                    Ok(resp) => {
+                        let user = User {
+                            name: "test".to_string(),
+                            email: "email".to_string(),
+                            mfa_token: resp.mfa_token,
+                            access_token: resp.access_token,
+                            refresh_token: resp.refresh_token,
+                        };
+                        user_ctx.state.dispatch(UserAction::Set(user));
+
+                        let query = location
+                            .query::<LoginQuery>()
+                            .unwrap_or(LoginQuery { return_to: None });
+
+                        match query.return_to {
+                            Some(path) => match <Route as Routable>::recognize(&path) {
+                                Some(route) => navigator.push(&route),
+                                None => navigator.push(&Route::Home),
+                            },
+                            None => navigator.push(&Route::Home),
+                        }
                     }
-                    Ok(res) => server_error.set(format!("Erro no servidor: {}", res.status())),
-                    Err(e) => server_error.set(format!("Erro de conexão: {}", e)),
+                    Err(err_msg) => {
+                        server_error.set(err_msg);
+                    }
                 }
                 is_loading.set(false);
             });
