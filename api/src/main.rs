@@ -31,7 +31,8 @@ async fn login(data: web::Data<AppState>, body: web::Json<LoginRequest>) -> impl
         Err(e) => {
             info!("Login error: {}", e);
             web::Json(LoginResult {
-                mfa_token: None,
+                mfa_verification_token: None,
+                mfa_registration_token: None,
                 access_token: None,
                 refresh_token: None,
             })

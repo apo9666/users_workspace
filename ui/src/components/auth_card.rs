@@ -6,8 +6,8 @@ pub struct Props {
     pub children: Children,
 }
 
-#[function_component(AuthCard)]
-pub fn auth_card(props: &Props) -> Html {
+#[component]
+pub fn AuthCard(props: &Props) -> Html {
     html! {
         <div class="auth-container">
             <div class="auth-box">

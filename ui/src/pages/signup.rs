@@ -18,8 +18,8 @@ use crate::{
 };
 use api_types::signup::SignupRequest;
 
-#[function_component(SignupPage)]
-pub fn signup_page() -> Html {
+#[component]
+pub fn SignupPage() -> Html {
     let is_loading = use_state(|| false);
     let server_error = use_state(|| String::new());
 

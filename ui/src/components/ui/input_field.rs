@@ -14,8 +14,8 @@ pub struct InputFieldProps {
     pub field: UseStateHandle<Field>,
 }
 
-#[function_component(InputField)]
-pub fn input_field(props: &InputFieldProps) -> Html {
+#[component]
+pub fn InputField(props: &InputFieldProps) -> Html {
     let oninput = {
         let field = props.field.clone();
         Callback::from(move |e: InputEvent| {

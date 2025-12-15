@@ -53,5 +53,5 @@ async fn main() {
         .await
         .unwrap();
 
-    println!("MFA Token: {}", result.mfa_token.unwrap());
+    println!("MFA Token: {}", result.mfa_registration_token.unwrap());
 }

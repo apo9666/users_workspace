@@ -14,8 +14,8 @@ struct ReturnToQuery {
     return_to: String,
 }
 
-#[function_component(ProtectedRoute)]
-pub fn protected_route(props: &Props) -> Html {
+#[component]
+pub fn ProtectedRoute(props: &Props) -> Html {
     let user_ctx = use_context::<UserContext>().expect("no user ctx found");
     let navigator = use_navigator().expect("Navigator not found");
     let location = use_location().expect("Location not found");

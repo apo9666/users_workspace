@@ -13,7 +13,8 @@ pub struct User {
     pub email: String,
     pub access_token: Option<String>,
     pub refresh_token: Option<String>,
-    pub mfa_token: Option<String>,
+    pub mfa_registration_token: Option<String>,
+    pub mfa_verification_token: Option<String>,
 }
 
 #[derive(Clone, PartialEq)]

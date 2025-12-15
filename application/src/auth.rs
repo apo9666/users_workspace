@@ -75,7 +75,8 @@ pub enum AuthError {
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct LoginResult {
-    pub mfa_token: Option<String>,
+    pub mfa_registration_token: Option<String>,
+    pub mfa_verification_token: Option<String>,
     pub access_token: Option<String>,
     pub refresh_token: Option<String>,
 }
@@ -150,7 +151,7 @@ impl Auth {
             let mfa_token = self
                 .for_auth_tokens
                 .create_token(Claims {
-                    token_type: "mfa".to_string(),
+                    token_type: "mfa_verification".to_string(),
                     sub: username.clone(),
                     exp,
                 })
@@ -158,39 +159,58 @@ impl Auth {
                 .map_err(|_| AuthError::MFATokenCreationFailed)?;
 
             return Ok(LoginResult {
-                mfa_token: Some(mfa_token),
+                mfa_registration_token: None,
+                mfa_verification_token: Some(mfa_token),
+                access_token: None,
+                refresh_token: None,
+            });
+        } else {
+            let exp = (since_the_epoch.as_secs() + 3600) as usize; // 1h from now
+            let mfa_token = self
+                .for_auth_tokens
+                .create_token(Claims {
+                    token_type: "mfa_registration".to_string(),
+                    sub: username.clone(),
+                    exp,
+                })
+                .await
+                .map_err(|_| AuthError::MFATokenCreationFailed)?;
+
+            return Ok(LoginResult {
+                mfa_registration_token: Some(mfa_token),
+                mfa_verification_token: None,
                 access_token: None,
                 refresh_token: None,
             });
         }
 
-        let exp = (since_the_epoch.as_secs() + 604800) as usize; // 7 days from now
-        let refresh_token = self
-            .for_auth_tokens
-            .create_token(Claims {
-                token_type: "refresh".to_string(),
-                sub: username.clone(),
-                exp,
-            })
-            .await
-            .map_err(|_| AuthError::RefreshTokenCreationFailed)?;
+        // let exp = (since_the_epoch.as_secs() + 604800) as usize; // 7 days from now
+        // let refresh_token = self
+        //     .for_auth_tokens
+        //     .create_token(Claims {
+        //         token_type: "refresh".to_string(),
+        //         sub: username.clone(),
+        //         exp,
+        //     })
+        //     .await
+        //     .map_err(|_| AuthError::RefreshTokenCreationFailed)?;
 
-        let exp = (since_the_epoch.as_secs() + 600) as usize; // 10 minutes from now
-        let access_token = self
-            .for_auth_tokens
-            .create_token(Claims {
-                token_type: "access".to_string(),
-                sub: username.clone(),
-                exp,
-            })
-            .await
-            .map_err(|_| AuthError::AccessTokenCreationFailed)?;
+        // let exp = (since_the_epoch.as_secs() + 600) as usize; // 10 minutes from now
+        // let access_token = self
+        //     .for_auth_tokens
+        //     .create_token(Claims {
+        //         token_type: "access".to_string(),
+        //         sub: username.clone(),
+        //         exp,
+        //     })
+        //     .await
+        //     .map_err(|_| AuthError::AccessTokenCreationFailed)?;
 
-        return Ok(LoginResult {
-            mfa_token: None,
-            access_token: Some(access_token),
-            refresh_token: Some(refresh_token),
-        });
+        // return Ok(LoginResult {
+        //     mfa_token: None,
+        //     access_token: Some(access_token),
+        //     refresh_token: Some(refresh_token),
+        // });
     }
 
     pub async fn mfa_totp_setup(&self, mfa_token: String) -> Result<String, AuthError> {

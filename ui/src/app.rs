@@ -10,6 +10,7 @@ use crate::pages::home::HomePage;
 use crate::pages::login::LoginPage;
 use crate::pages::not_found::NotFoundPage;
 use crate::pages::signup::SignupPage;
+use crate::pages::totp::TotpPage;
 
 #[derive(Clone, Routable, PartialEq)]
 pub enum Route {
@@ -19,6 +20,8 @@ pub enum Route {
     Login,
     #[at("/signup")]
     Signup,
+    #[at("/totp")]
+    Totp,
     #[not_found]
     #[at("/404")]
     NotFound,
@@ -34,6 +37,11 @@ fn switch(routes: Route) -> Html {
         Route::Signup => html! {
             <AuthLayout>
                 <SignupPage />
+            </AuthLayout>
+        },
+        Route::Totp => html! {
+            <AuthLayout>
+                <TotpPage />
             </AuthLayout>
         },
         Route::Home => html! {

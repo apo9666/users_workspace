@@ -3,7 +3,7 @@ use yew::{platform::spawn_local, prelude::*};
 use crate::{components::ui::server_error::ServerError, services::auth::totp_setup};
 
 #[component]
-fn TotpPage() -> Html {
+pub fn TotpPage() -> Html {
     let qr_code_url = use_state(|| None::<String>);
     let is_loading = use_state(|| true); // Começa como true
     let server_error = use_state(|| String::new());

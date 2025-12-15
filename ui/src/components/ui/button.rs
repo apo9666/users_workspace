@@ -12,8 +12,8 @@ pub struct ButtonProps {
     pub btn_type: &'static str, // button, submit, etc.
 }
 
-#[function_component(Button)]
-pub fn button(props: &ButtonProps) -> Html {
+#[component]
+pub fn Button(props: &ButtonProps) -> Html {
     html! {
         <button
             type={props.btn_type}

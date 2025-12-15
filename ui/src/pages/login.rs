@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use api_types::login::LoginRequest;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use validator::Validate;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
@@ -25,7 +25,7 @@ use crate::{
     utils::validator::{get_validation_errors, sync_field_error},
 };
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct LoginQuery {
     return_to: Option<String>,
 }
@@ -87,22 +87,29 @@ pub fn LoginPage() -> Html {
                         let user = User {
                             name: "test".to_string(),
                             email: "email".to_string(),
-                            mfa_token: resp.mfa_token,
+                            mfa_registration_token: resp.mfa_registration_token,
+                            mfa_verification_token: resp.mfa_verification_token,
                             access_token: resp.access_token,
                             refresh_token: resp.refresh_token,
                         };
-                        user_ctx.state.dispatch(UserAction::Set(user));
+                        user_ctx.state.dispatch(UserAction::Set(user.clone()));
 
                         let query = location
                             .query::<LoginQuery>()
                             .unwrap_or(LoginQuery { return_to: None });
 
-                        match query.return_to {
-                            Some(path) => match <Route as Routable>::recognize(&path) {
-                                Some(route) => navigator.push(&route),
+                        match (user.mfa_registration_token, user.access_token) {
+                            (Some(_), _) => {
+                                let _ = navigator.push_with_query(&Route::Totp, &query);
+                            }
+                            (None, Some(_)) => match query.return_to {
+                                Some(path) => match <Route as Routable>::recognize(&path) {
+                                    Some(route) => navigator.push(&route),
+                                    None => navigator.push(&Route::Home),
+                                },
                                 None => navigator.push(&Route::Home),
                             },
-                            None => navigator.push(&Route::Home),
+                            _ => server_error.set("Resposta do servidor inválida".to_string()),
                         }
                     }
                     Err(err_msg) => {
