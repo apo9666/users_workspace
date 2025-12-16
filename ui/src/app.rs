@@ -41,7 +41,9 @@ fn switch(routes: Route) -> Html {
         },
         Route::Totp => html! {
             <AuthLayout>
-                <TotpPage />
+                <ProtectedRoute>
+                    <TotpPage />
+                </ProtectedRoute>
             </AuthLayout>
         },
         Route::Home => html! {
