@@ -1,8 +1,16 @@
 use std::sync::Arc;
 
 use actix_cors::Cors;
-use actix_web::{App, HttpServer, Responder, http, middleware::Logger, post, web};
-use api_types::{login::LoginRequest, signup::SignupRequest};
+use actix_web::{
+    App, HttpRequest, HttpServer, Responder,
+    http::{self, header},
+    middleware::Logger,
+    post, web,
+};
+use actix_web_httpauth::extractors::bearer::{self, BearerAuth};
+use api_types::{
+    error::ErrorResponse, login::LoginRequest, signup::SignupRequest, totp::TotpSetupResponse,
+};
 use application::auth::{Auth, LoginResult};
 use env_logger::{Env, init_from_env};
 use jwt_auth_tokens::JwtAuthTokens;
@@ -38,6 +46,52 @@ async fn login(data: web::Data<AppState>, body: web::Json<LoginRequest>) -> impl
             })
         }
     }
+}
+
+#[post("/mfa/totp/setup")]
+async fn totp_setup(data: web::Data<AppState>, auth: BearerAuth) -> impl Responder {
+    info!("{}", auth.token());
+
+    match data.auth.mfa_totp_setup(auth.token().to_string()).await {
+        Ok(result) => web::Json(TotpSetupResponse {
+            qr_code_url: result,
+        }),
+        Err(e) => {
+            info!("Totp setup error: {}", e);
+            web::Json(TotpSetupResponse {
+                qr_code_url: "deu ruim".to_string(),
+            })
+        }
+    }
+    // let headers = req.headers();
+
+    // if let Some(auth_header_value) = headers.get(header::AUTHORIZATION) {
+    //     if let Ok(auth_str) = auth_header_value.to_str() {
+    //         println!("Authorization header: {}", auth_str);
+    //         // Process the token (e.g., validate it)
+    //         // ...
+    //     }
+    // } else {
+    //     // No Authorization header found
+    //     return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
+    // }
+
+    // match data
+    //     .auth
+    //     .login(body.email.clone(), body.password.clone())
+    //     .await
+    // {
+    //     Ok(result) => web::Json(result),
+    //     Err(e) => {
+    //         info!("Login error: {}", e);
+    //         web::Json(LoginResult {
+    //             mfa_verification_token: None,
+    //             mfa_registration_token: None,
+    //             access_token: None,
+    //             refresh_token: None,
+    //         })
+    //     }
+    // }
 }
 
 struct AppState {
@@ -82,8 +136,10 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .wrap(Logger::default())
             .app_data(web::Data::new(AppState { auth: auth.clone() }))
+            .app_data(bearer::Config::default())
             .service(greet)
             .service(login)
+            .service(totp_setup)
     })
     .bind(("127.0.0.1", 8080))?
     .run()

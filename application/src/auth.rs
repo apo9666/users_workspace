@@ -216,7 +216,7 @@ impl Auth {
     pub async fn mfa_totp_setup(&self, mfa_token: String) -> Result<String, AuthError> {
         let claims = self
             .for_auth_tokens
-            .validate_token(mfa_token, "access".to_string())
+            .validate_token(mfa_token, "mfa_registration".to_string())
             .await
             .map_err(|_| AuthError::TokenValidationFailed)?;
 
