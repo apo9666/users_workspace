@@ -9,7 +9,10 @@ use actix_web::{
 };
 use actix_web_httpauth::extractors::bearer::{self, BearerAuth};
 use api_types::{
-    error::ErrorResponse, login::LoginRequest, signup::SignupRequest, totp::TotpSetupResponse,
+    error::ErrorResponse,
+    login::LoginRequest,
+    signup::SignupRequest,
+    totp::{TotpSetupResponse, TotpVerifyRequest, TotpVerifyResponse},
 };
 use application::auth::{Auth, LoginResult};
 use env_logger::{Env, init_from_env};
@@ -48,11 +51,15 @@ async fn login(data: web::Data<AppState>, body: web::Json<LoginRequest>) -> impl
     }
 }
 
-#[post("/mfa/totp/setup")]
-async fn totp_setup(data: web::Data<AppState>, auth: BearerAuth) -> impl Responder {
+#[post("/mfa/totp/registration/start")]
+async fn totp_registration_start(data: web::Data<AppState>, auth: BearerAuth) -> impl Responder {
     info!("{}", auth.token());
 
-    match data.auth.mfa_totp_setup(auth.token().to_string()).await {
+    match data
+        .auth
+        .start_totp_registration(auth.token().to_string())
+        .await
+    {
         Ok(result) => web::Json(TotpSetupResponse {
             qr_code_url: result,
         }),
@@ -63,35 +70,58 @@ async fn totp_setup(data: web::Data<AppState>, auth: BearerAuth) -> impl Respond
             })
         }
     }
-    // let headers = req.headers();
+}
 
-    // if let Some(auth_header_value) = headers.get(header::AUTHORIZATION) {
-    //     if let Ok(auth_str) = auth_header_value.to_str() {
-    //         println!("Authorization header: {}", auth_str);
-    //         // Process the token (e.g., validate it)
-    //         // ...
-    //     }
-    // } else {
-    //     // No Authorization header found
-    //     return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
-    // }
+#[post("/mfa/totp/registration/finish")]
+async fn totp_registration_finish(
+    data: web::Data<AppState>,
+    auth: BearerAuth,
+    body: web::Json<TotpVerifyRequest>,
+) -> impl Responder {
+    info!("{}", auth.token());
 
-    // match data
-    //     .auth
-    //     .login(body.email.clone(), body.password.clone())
-    //     .await
-    // {
-    //     Ok(result) => web::Json(result),
-    //     Err(e) => {
-    //         info!("Login error: {}", e);
-    //         web::Json(LoginResult {
-    //             mfa_verification_token: None,
-    //             mfa_registration_token: None,
-    //             access_token: None,
-    //             refresh_token: None,
-    //         })
-    //     }
-    // }
+    match data
+        .auth
+        .finish_totp_registration(auth.token().to_string(), body.code.clone())
+        .await
+    {
+        Ok((refresh_token, access_token)) => web::Json(TotpVerifyResponse {
+            refresh_token,
+            access_token,
+        }),
+        Err(e) => {
+            info!("Totp setup error: {}", e);
+            web::Json(TotpVerifyResponse {
+                access_token: "".to_string(),
+                refresh_token: "".to_string(),
+            })
+        }
+    }
+}
+
+#[post("/mfa/totp/verify")]
+async fn totp_verify(
+    data: web::Data<AppState>,
+    auth: BearerAuth,
+    body: web::Json<TotpVerifyRequest>,
+) -> impl Responder {
+    info!("{}", auth.token());
+
+    match data
+        .auth
+        .start_totp_registration(auth.token().to_string())
+        .await
+    {
+        Ok(result) => web::Json(TotpSetupResponse {
+            qr_code_url: result,
+        }),
+        Err(e) => {
+            info!("Totp setup error: {}", e);
+            web::Json(TotpSetupResponse {
+                qr_code_url: "deu ruim".to_string(),
+            })
+        }
+    }
 }
 
 struct AppState {
@@ -139,7 +169,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(bearer::Config::default())
             .service(greet)
             .service(login)
-            .service(totp_setup)
+            .service(totp_registration_start)
+            .service(totp_registration_finish)
     })
     .bind(("127.0.0.1", 8080))?
     .run()

@@ -1,0 +1,129 @@
+.totp-setup-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  color: var(--text-main);
+  animation: fadeIn 0.3s ease-in-out;
+
+  .step-header {
+    margin-bottom: 12px;
+
+    .step-number {
+      font-weight: 700;
+      color: var(--primary);
+      margin-right: 4px;
+    }
+
+    .step-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .step-desc {
+      display: block;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+  }
+
+  .qr-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+
+    .qr-frame {
+      background: #ffffff; // Essencial para leitura do sensor
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: $border-radius-sm;
+
+      svg {
+        display: block;
+        max-width: 100%;
+        height: auto;
+      }
+    }
+  }
+
+  .manual-key-info {
+    width: 100%;
+    padding: 12px;
+    background: var(--status-bg);
+    border: 1px solid var(--status-border);
+    border-radius: $border-radius-sm;
+    text-align: center;
+
+    span {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-light);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    code {
+      font-family: monospace;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--primary);
+      display: block;
+      inline-size: 100%;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+      word-break: break-all;
+    }
+  }
+
+  .verification-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+
+      input {
+        flex: 1;
+        padding: 12px;
+        background: var(--bg-input);
+        border: 1px solid var(--border);
+        color: var(--text-main);
+        border-radius: $border-radius-sm;
+        font-size: 1.25rem;
+        text-align: center;
+        letter-spacing: 4px;
+        transition: border-color $transition-speed;
+
+        &:focus {
+          outline: none;
+          border-color: var(--primary);
+        }
+      }
+
+      button {
+        padding: 0 20px;
+        border-radius: $border-radius-sm;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all $transition-speed;
+        border: none;
+
+        &.btn-confirm {
+          background: var(--primary);
+          color: #ffffff;
+          &:hover { background: var(--primary-hover); }
+          &:disabled {
+            background: var(--status-bg);
+            color: var(--text-light);
+            cursor: not-allowed;
+          }
+        }
+      }
+    }
+  }
+}

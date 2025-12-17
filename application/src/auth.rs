@@ -213,7 +213,7 @@ impl Auth {
         // });
     }
 
-    pub async fn mfa_totp_setup(&self, mfa_token: String) -> Result<String, AuthError> {
+    pub async fn start_totp_registration(&self, mfa_token: String) -> Result<String, AuthError> {
         let claims = self
             .for_auth_tokens
             .validate_token(mfa_token, "mfa_registration".to_string())
@@ -242,6 +242,77 @@ impl Auth {
             .map_err(AuthError::SaveUserError)?;
 
         Ok(auth_url)
+    }
+
+    pub async fn finish_totp_registration(
+        &self,
+        mfa_token: String,
+        code: String,
+    ) -> Result<(String, String), AuthError> {
+        let claims = self
+            .for_auth_tokens
+            .validate_token(mfa_token, "mfa_registration".to_string())
+            .await
+            .map_err(|_| AuthError::TokenValidationFailed)?;
+
+        let Some(credential) = self
+            .user_repository
+            .find_username(claims.sub)
+            .await
+            .map_err(AuthError::FindUserError)?
+        else {
+            return Err(AuthError::UserNotFound);
+        };
+
+        let Some(secret_value) = credential.otp_secret else {
+            return Err(AuthError::MFATokenCreationFailed);
+        };
+
+        let result = self
+            .for_totp
+            .verify(secret_value, code)
+            .await
+            .map_err(AuthError::TotpError)?;
+
+        if !result {
+            return Err(AuthError::MFATokenCreationFailed);
+        }
+
+        let start = SystemTime::now();
+        let since_the_epoch = start
+            .duration_since(UNIX_EPOCH)
+            .expect("time should go forward");
+
+        let exp = (since_the_epoch.as_secs() + 604800) as usize; // 7 days from now
+        let refresh_token = self
+            .for_auth_tokens
+            .create_token(Claims {
+                token_type: "refresh".to_string(),
+                sub: credential.id.to_string(),
+                exp,
+            })
+            .await
+            .map_err(|_| AuthError::RefreshTokenCreationFailed)?;
+
+        let exp = (since_the_epoch.as_secs() + 600) as usize; // 10 minutes from now
+        let access_token = self
+            .for_auth_tokens
+            .create_token(Claims {
+                token_type: "access".to_string(),
+                sub: credential.id.to_string(),
+                exp,
+            })
+            .await
+            .map_err(|_| AuthError::AccessTokenCreationFailed)?;
+
+        // credential.otp_secret = Some(secret);
+        // self.user_repository
+        //     .save(credential)
+        //     .await
+        //     .map_err(AuthError::SaveUserError)?;
+
+        // Ok(auth_url)
+        Ok((refresh_token, access_token))
     }
 
     pub async fn start_passkey_registration(&self, user_id: Uuid) -> Result<String, AuthError> {

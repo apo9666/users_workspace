@@ -43,7 +43,7 @@ async fn main() {
         .unwrap();
 
     let result = auth
-        .mfa_totp_setup(result.access_token.unwrap())
+        .start_totp_registration(result.access_token.unwrap())
         .await
         .unwrap();
     println!("OTP Secret: {}", result);
