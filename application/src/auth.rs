@@ -15,10 +15,11 @@ use webauthn_rs::{
     Webauthn,
     prelude::{
         PasskeyAuthentication, PasskeyRegistration, PublicKeyCredential,
-        RegisterPublicKeyCredential, WebauthnError,
+        RegisterPublicKeyCredential, Url, WebauthnError,
     },
 };
 
+const TOTP_REG_STATE: &str = "totp/reg/state";
 const WEBAUTHN_REG_STATE: &str = "webauthn/reg/state";
 const WEBAUTHN_AUTH_STATE: &str = "webauthn/auth/state";
 
@@ -68,6 +69,9 @@ pub enum AuthError {
 
     #[error("TOTP error: {0}")]
     TotpError(TotpError),
+
+    #[error("TOTP registration state not found.")]
+    TotpRegistrationNotFound,
 
     #[error("WebAuthn error: {0}")]
     WebauthnError(WebauthnError),
@@ -220,7 +224,7 @@ impl Auth {
             .await
             .map_err(|_| AuthError::TokenValidationFailed)?;
 
-        let Some(mut credential) = self
+        let Some(mut user) = self
             .user_repository
             .find_username(claims.sub)
             .await
@@ -229,17 +233,19 @@ impl Auth {
             return Err(AuthError::UserNotFound);
         };
 
-        let (secret, auth_url) = self
+        self.hsm_store
+            .set(user.id, TOTP_REG_STATE, "")
+            .map_err(AuthError::SetHsmStoreError)?;
+
+        let (_, auth_url) = self
             .for_totp
-            .auth_url(credential.username.clone(), "TODO_ISSUER".to_string())
+            .auth_url(user.username.clone(), "TODO_ISSUER".to_string())
             .await
             .map_err(AuthError::TotpError)?;
 
-        credential.otp_secret = Some(secret);
-        self.user_repository
-            .save(credential)
-            .await
-            .map_err(AuthError::SaveUserError)?;
+        self.hsm_store
+            .set(user.id, TOTP_REG_STATE, &auth_url)
+            .map_err(AuthError::SetHsmStoreError)?;
 
         Ok(auth_url)
     }
@@ -255,7 +261,7 @@ impl Auth {
             .await
             .map_err(|_| AuthError::TokenValidationFailed)?;
 
-        let Some(credential) = self
+        let Some(mut user) = self
             .user_repository
             .find_username(claims.sub)
             .await
@@ -264,13 +270,28 @@ impl Auth {
             return Err(AuthError::UserNotFound);
         };
 
-        let Some(secret_value) = credential.otp_secret else {
-            return Err(AuthError::MFATokenCreationFailed);
-        };
+        let reg_state_str = self
+            .hsm_store
+            .get(user.id, TOTP_REG_STATE)
+            .map_err(AuthError::GetHsmStoreError)?
+            .ok_or_else(|| AuthError::TotpRegistrationNotFound)?;
+
+        self.hsm_store
+            .set(user.id, TOTP_REG_STATE, "")
+            .map_err(AuthError::SetHsmStoreError)?;
+
+        let secret = Url::parse(&reg_state_str)
+            .ok()
+            .and_then(|u| {
+                u.query_pairs()
+                    .find(|(key, _)| key == "secret")
+                    .map(|(_, val)| val.into_owned())
+            })
+            .ok_or_else(|| AuthError::TotpRegistrationNotFound)?;
 
         let result = self
             .for_totp
-            .verify(secret_value, code)
+            .verify(secret.clone(), code)
             .await
             .map_err(AuthError::TotpError)?;
 
@@ -288,7 +309,7 @@ impl Auth {
             .for_auth_tokens
             .create_token(Claims {
                 token_type: "refresh".to_string(),
-                sub: credential.id.to_string(),
+                sub: user.id.to_string(),
                 exp,
             })
             .await
@@ -299,19 +320,18 @@ impl Auth {
             .for_auth_tokens
             .create_token(Claims {
                 token_type: "access".to_string(),
-                sub: credential.id.to_string(),
+                sub: user.id.to_string(),
                 exp,
             })
             .await
             .map_err(|_| AuthError::AccessTokenCreationFailed)?;
 
-        // credential.otp_secret = Some(secret);
-        // self.user_repository
-        //     .save(credential)
-        //     .await
-        //     .map_err(AuthError::SaveUserError)?;
+        user.otp_secret = Some(secret);
+        self.user_repository
+            .save(user)
+            .await
+            .map_err(AuthError::SaveUserError)?;
 
-        // Ok(auth_url)
         Ok((refresh_token, access_token))
     }
 
