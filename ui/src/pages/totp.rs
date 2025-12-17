@@ -2,7 +2,7 @@ use crate::{
     app::Route,
     components::{
         auth_card::AuthCard,
-        ui::{loading_spinner::LoadingSpinner, server_error::ServerError},
+        ui::{loading_spinner::LoadingSpinner, server_error::ServerError, totp_manual_key::TotpManualKey, totp_step::TotpStep},
     },
     context::user::{User, UserAction, UserContext},
     services::auth::{totp_registration_finish, totp_registration_start},
@@ -188,33 +188,25 @@ pub fn TotpPage() -> Html {
                         TotpState::Ready { secret, .. } => html! {
                             <>
                                 <div class="step-section">
-                                    <div class="step-header">
-                                        <span class="step-number">{"1."}</span>
-                                        <span class="step-title">{"Vincular Aplicativo"}</span>
-                                        <span class="step-desc">
-                                            {"Abra seu app autenticador e escaneie o código abaixo."}
-                                        </span>
-                                    </div>
-
+                                    <TotpStep
+                                        number="1."
+                                        title="Vincular Aplicativo"
+                                        description="Abra seu app autenticador e escaneie o código abaixo."
+                                    />
                                     <div class="qr-display">
                                         <div class="qr-frame" ref={svg_ref} />
-
-                                        <div class="manual-key-info">
-                                            <span>{"Chave Manual"}</span>
-                                            <code>{secret}</code>
-                                        </div>
+                                        <TotpManualKey secret={secret.clone()} />
                                     </div>
                                 </div>
 
                                 <hr style="border: 0; border-top: 1px solid var(--border); margin: 8px 0;" />
 
                                 <div class="verification-section">
-                                    <div class="step-header">
-                                        <span class="step-number">{"2."}</span>
-                                        <span class="step-title">{"Confirmar Registro"}</span>
-                                        <span class="step-desc">{"Digite o código de 6 dígitos gerado pelo app."}</span>
-                                    </div>
-
+                                    <TotpStep
+                                        number="2."
+                                        title="Confirmar Registro"
+                                        description="Digite o código de 6 dígitos gerado pelo app."
+                                    />
                                     <div class="input-group">
                                         <input
                                             type="text"
@@ -223,17 +215,14 @@ pub fn TotpPage() -> Html {
                                             maxlength="6"
                                             value={(*otp_code).clone()}
                                             oninput={on_input}
+                                            disabled={*is_submitting}
                                         />
                                         <button
                                             class="btn-confirm"
                                             onclick={on_submit}
                                             disabled={otp_code.len() != 6 || *is_submitting}
                                         >
-                                            if *is_submitting {
-                                                {"Validando..."}
-                                            } else {
-                                                {"Ativar"}
-                                            }
+                                            { if *is_submitting { "Validando..." } else { "Ativar" } }
                                         </button>
                                     </div>
 

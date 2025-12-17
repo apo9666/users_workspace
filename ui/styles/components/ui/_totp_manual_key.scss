@@ -1,0 +1,29 @@
+.manual-key-info {
+  width: 100%;
+  padding: 12px;
+  background: var(--status-bg);
+  border: 1px solid var(--status-border);
+  border-radius: $border-radius-sm;
+  text-align: center;
+
+  span {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  code {
+    font-family: monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--primary);
+    display: block;
+    inline-size: 100%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-all;
+  }
+}

@@ -1,0 +1,22 @@
+.step-header {
+  margin-bottom: 12px;
+
+  .step-number {
+    font-weight: 700;
+    color: var(--primary);
+    margin-right: 4px;
+  }
+
+  .step-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .step-desc {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+}

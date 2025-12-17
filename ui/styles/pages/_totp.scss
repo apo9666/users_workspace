@@ -5,29 +5,6 @@
   color: var(--text-main);
   animation: fadeIn 0.3s ease-in-out;
 
-  .step-header {
-    margin-bottom: 12px;
-
-    .step-number {
-      font-weight: 700;
-      color: var(--primary);
-      margin-right: 4px;
-    }
-
-    .step-title {
-      font-weight: 600;
-      font-size: 0.95rem;
-    }
-
-    .step-desc {
-      display: block;
-      font-size: 0.875rem;
-      color: var(--text-muted);
-      margin-top: 4px;
-      line-height: 1.4;
-    }
-  }
-
   .qr-display {
     display: flex;
     flex-direction: column;
@@ -45,36 +22,6 @@
         max-width: 100%;
         height: auto;
       }
-    }
-  }
-
-  .manual-key-info {
-    width: 100%;
-    padding: 12px;
-    background: var(--status-bg);
-    border: 1px solid var(--status-border);
-    border-radius: $border-radius-sm;
-    text-align: center;
-
-    span {
-      display: block;
-      font-size: 0.75rem;
-      color: var(--text-light);
-      text-transform: uppercase;
-      margin-bottom: 4px;
-    }
-
-    code {
-      font-family: monospace;
-      font-size: 1rem;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      color: var(--primary);
-      display: block;
-      inline-size: 100%;
-      overflow-wrap: break-word;
-      word-wrap: break-word;
-      word-break: break-all;
     }
   }
 
