@@ -8,6 +8,7 @@ use yew::prelude::*;
 use yew_router::{
     Routable,
     hooks::{use_location, use_navigator},
+    prelude::Link,
 };
 
 use crate::{
@@ -15,6 +16,7 @@ use crate::{
     components::{
         auth_card::AuthCard,
         ui::{
+            auth_footer::AuthFooter,
             button::Button,
             input_field::{Field, InputField},
             server_error::ServerError,
@@ -129,6 +131,12 @@ pub fn LoginPage() -> Html {
             <Button label="Entrar" onclick={handle_login} is_loading={*is_loading} />
 
             <ServerError message={(*server_error).clone()} />
+
+            <AuthFooter
+                    message="Não tem uma conta?"
+                    link_text="Cadastre-se aqui"
+                    to={Route::Signup}
+                />
         </AuthCard>
     }
 }

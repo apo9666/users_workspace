@@ -37,3 +37,6 @@ fn validate_password(password: &str) -> Result<(), ValidationError> {
         Err(error)
     }
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SignupResponse {}

@@ -1,20 +1,16 @@
 use std::sync::Arc;
 
 use actix_cors::Cors;
-use actix_web::{
-    App, HttpRequest, HttpServer, Responder,
-    http::{self, header},
-    middleware::Logger,
-    post, web,
-};
+use actix_web::{App, HttpResponse, HttpServer, Responder, http, middleware::Logger, post, web};
 use actix_web_httpauth::extractors::bearer::{self, BearerAuth};
+use actix_web_validator::Json;
 use api_types::{
     error::ErrorResponse,
     login::LoginRequest,
-    signup::SignupRequest,
+    signup::{SignupRequest, SignupResponse},
     totp::{TotpSetupResponse, TotpVerifyRequest, TotpVerifyResponse},
 };
-use application::auth::{Auth, LoginResult};
+use application::auth::Auth;
 use env_logger::{Env, init_from_env};
 use jwt_auth_tokens::JwtAuthTokens;
 use log::info;
@@ -23,29 +19,34 @@ use totp::Totp;
 use webauthn_rs::{WebauthnBuilder, prelude::Url};
 
 #[post("/signup")]
-async fn greet(data: web::Data<AppState>, body: web::Json<SignupRequest>) -> impl Responder {
-    data.auth
+async fn greet(data: web::Data<AppState>, body: Json<SignupRequest>) -> impl Responder {
+    match data
+        .auth
         .signup(body.name.clone(), body.email.clone(), body.password.clone())
         .await
-        .unwrap();
-    format!("Hello")
+    {
+        Ok(_) => HttpResponse::Ok().json(SignupResponse {}),
+        Err(e) => {
+            info!("Signup error: {}", e);
+            HttpResponse::BadRequest().json(ErrorResponse {
+                message: "Erro ao cadastrar usuário".to_string(),
+            })
+        }
+    }
 }
 
 #[post("/login")]
-async fn login(data: web::Data<AppState>, body: web::Json<LoginRequest>) -> impl Responder {
+async fn login(data: web::Data<AppState>, body: Json<LoginRequest>) -> impl Responder {
     match data
         .auth
         .login(body.email.clone(), body.password.clone())
         .await
     {
-        Ok(result) => web::Json(result),
+        Ok(result) => HttpResponse::Ok().json(result),
         Err(e) => {
             info!("Login error: {}", e);
-            web::Json(LoginResult {
-                mfa_verification_token: None,
-                mfa_registration_token: None,
-                access_token: None,
-                refresh_token: None,
+            HttpResponse::Unauthorized().json(ErrorResponse {
+                message: "Usuário ou senha inválidos".to_string(),
             })
         }
     }
@@ -53,20 +54,18 @@ async fn login(data: web::Data<AppState>, body: web::Json<LoginRequest>) -> impl
 
 #[post("/mfa/totp/registration/start")]
 async fn totp_registration_start(data: web::Data<AppState>, auth: BearerAuth) -> impl Responder {
-    info!("{}", auth.token());
-
     match data
         .auth
         .start_totp_registration(auth.token().to_string())
         .await
     {
-        Ok(result) => web::Json(TotpSetupResponse {
+        Ok(result) => HttpResponse::Ok().json(TotpSetupResponse {
             qr_code_url: result,
         }),
         Err(e) => {
-            info!("Totp setup error: {}", e);
-            web::Json(TotpSetupResponse {
-                qr_code_url: "deu ruim".to_string(),
+            info!("Totp registration start error: {}", e);
+            HttpResponse::BadRequest().json(ErrorResponse {
+                message: "Erro ao iniciar registro TOTP".to_string(),
             })
         }
     }
@@ -76,24 +75,21 @@ async fn totp_registration_start(data: web::Data<AppState>, auth: BearerAuth) ->
 async fn totp_registration_finish(
     data: web::Data<AppState>,
     auth: BearerAuth,
-    body: web::Json<TotpVerifyRequest>,
+    body: Json<TotpVerifyRequest>,
 ) -> impl Responder {
-    info!("{}", auth.token());
-
     match data
         .auth
         .finish_totp_registration(auth.token().to_string(), body.code.clone())
         .await
     {
-        Ok((refresh_token, access_token)) => web::Json(TotpVerifyResponse {
+        Ok((refresh_token, access_token)) => HttpResponse::Ok().json(TotpVerifyResponse {
             refresh_token,
             access_token,
         }),
         Err(e) => {
-            info!("Totp setup error: {}", e);
-            web::Json(TotpVerifyResponse {
-                access_token: "".to_string(),
-                refresh_token: "".to_string(),
+            info!("Totp registration finish error: {}", e);
+            HttpResponse::BadRequest().json(ErrorResponse {
+                message: "Erro ao terminar registro TOTP".to_string(),
             })
         }
     }
@@ -103,7 +99,7 @@ async fn totp_registration_finish(
 async fn totp_verify(
     data: web::Data<AppState>,
     auth: BearerAuth,
-    body: web::Json<TotpVerifyRequest>,
+    body: Json<TotpVerifyRequest>,
 ) -> impl Responder {
     info!("{}", auth.token());
 
@@ -167,6 +163,19 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .app_data(web::Data::new(AppState { auth: auth.clone() }))
             .app_data(bearer::Config::default())
+            .app_data(
+                actix_web_validator::JsonConfig::default().error_handler(|err, _req| {
+                    let response = ErrorResponse {
+                        message: err.to_string(),
+                    };
+
+                    actix_web::error::InternalError::from_response(
+                        err,
+                        HttpResponse::BadRequest().json(response),
+                    )
+                    .into()
+                }),
+            )
             .service(greet)
             .service(login)
             .service(totp_registration_start)
