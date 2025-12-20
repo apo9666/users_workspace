@@ -10,9 +10,27 @@ qrcode = "0.14.1"
 reqwest = { version = "0.12.25", features = ["json"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
+serde-wasm-bindgen = "0.6.5"
 url = "2.5.7"
 validator = { version = "0.20.0", features = ["derive"] }
+wasm-bindgen = "0.2.106"
 wasm-bindgen-futures = "0.4.56"
-web-sys = "0.3.83"
 yew = { version = "0.22.0", features = ["csr"] }
 yew-router = "0.19.0"
+base64 = "0.22.1"
+
+[dependencies.web-sys]
+version = "0.3.83"
+features = [
+  "Window",
+  "Navigator",
+  "CredentialsContainer",
+  "CredentialCreationOptions",
+  "PublicKeyCredential",
+  "PublicKeyCredentialCreationOptions",
+  "PublicKeyCredentialRpEntity",
+  "PublicKeyCredentialUserEntity",
+  "PublicKeyCredentialParameters",
+  "AuthenticatorSelectionCriteria",
+  "AuthenticatorAttestationResponse",
+]

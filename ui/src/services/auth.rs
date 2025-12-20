@@ -43,7 +43,7 @@ pub async fn signup(req: SignupRequest) -> reqwest::Result<reqwest::Response> {
 pub async fn totp_registration_start(auth_token: &str) -> Result<TotpSetupResponse, String> {
     let client = Client::new();
     let response = client
-        .post("http://localhost:8080/mfa/totp/registration/start")
+        .post("http://localhost:8080/mfa/registration/totp/start")
         .bearer_auth(auth_token)
         .send()
         .await
@@ -71,7 +71,7 @@ pub async fn totp_registration_finish(
 ) -> Result<TotpVerifyResponse, String> {
     let client = Client::new();
     let response = client
-        .post("http://localhost:8080/mfa/totp/registration/finish")
+        .post("http://localhost:8080/mfa/registration/totp/finish")
         .json(&req)
         .bearer_auth(auth_token)
         .send()
@@ -81,6 +81,31 @@ pub async fn totp_registration_finish(
     if response.status().is_success() {
         response
             .json::<TotpVerifyResponse>()
+            .await
+            .map_err(|_| "Erro ao processar resposta do servidor".to_string())
+    } else {
+        let error_msg = response
+            .json::<ErrorResponse>()
+            .await
+            .map(|e| e.message)
+            .unwrap_or_else(|_| "Falha desconhecida no cadastro".to_string());
+
+        Err(error_msg)
+    }
+}
+
+pub async fn webauthn_registration_start(auth_token: &str) -> Result<String, String> {
+    let client = Client::new();
+    let response = client
+        .post("http://localhost:8080/mfa/registration/webauthn/start")
+        .bearer_auth(auth_token)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if response.status().is_success() {
+        response
+            .text()
             .await
             .map_err(|_| "Erro ao processar resposta do servidor".to_string())
     } else {

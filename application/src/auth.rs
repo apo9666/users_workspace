@@ -110,6 +110,20 @@ impl Auth {
         }
     }
 
+    pub async fn validate_token(
+        &self,
+        token: &str,
+        expected_type: &str,
+    ) -> Result<Claims, AuthError> {
+        let claims = self
+            .for_auth_tokens
+            .validate_token(token.to_string(), expected_type.to_string())
+            .await
+            .map_err(|_| AuthError::TokenValidationFailed)?;
+
+        Ok(claims)
+    }
+
     pub async fn signup(
         &self,
         name: String,
@@ -156,7 +170,7 @@ impl Auth {
                 .for_auth_tokens
                 .create_token(Claims {
                     token_type: "mfa_verification".to_string(),
-                    sub: username.clone(),
+                    sub: credential.id.to_string(),
                     exp,
                 })
                 .await
@@ -174,7 +188,7 @@ impl Auth {
                 .for_auth_tokens
                 .create_token(Claims {
                     token_type: "mfa_registration".to_string(),
-                    sub: username.clone(),
+                    sub: credential.id.to_string(),
                     exp,
                 })
                 .await

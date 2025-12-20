@@ -11,6 +11,7 @@ use crate::pages::login::LoginPage;
 use crate::pages::not_found::NotFoundPage;
 use crate::pages::signup::SignupPage;
 use crate::pages::totp::TotpPage;
+use crate::pages::webauthn_register::WebAuthnRegisterPage;
 
 #[derive(Clone, Routable, PartialEq)]
 pub enum Route {
@@ -22,6 +23,8 @@ pub enum Route {
     Signup,
     #[at("/totp")]
     Totp,
+    #[at("/webauthn/register")]
+    WebAuthnRegister,
     #[not_found]
     #[at("/404")]
     NotFound,
@@ -43,6 +46,13 @@ fn switch(routes: Route) -> Html {
             <AuthLayout>
                 <ProtectedRoute>
                     <TotpPage />
+                </ProtectedRoute>
+            </AuthLayout>
+        },
+        Route::WebAuthnRegister => html! {
+            <AuthLayout>
+                <ProtectedRoute>
+                    <WebAuthnRegisterPage />
                 </ProtectedRoute>
             </AuthLayout>
         },

@@ -3402,13 +3402,16 @@ name = "ui"
 version = "0.1.0"
 dependencies = [
  "api_types",
+ "base64 0.22.1",
  "log",
  "qrcode",
  "reqwest",
  "serde",
+ "serde-wasm-bindgen",
  "serde_json",
  "url",
  "validator",
+ "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
  "yew",
