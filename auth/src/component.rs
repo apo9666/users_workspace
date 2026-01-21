@@ -8,8 +8,9 @@ use crate::{
     usecases::{
         finish_passkey_authentication::FinishPasskeyAuthenticationUseCase,
         finish_passkey_registration::FinishPasskeyRegistrationUseCase,
-        finish_totp_registration::FinishTOTPRegistrationUseCase, login::LoginUseCase,
-        signup::SignupUseCase, start_passkey_authentication::StartPasskeyAuthenticationUseCase,
+        finish_totp_registration::FinishTOTPRegistrationUseCase, get_jwks::GetJwksUseCase,
+        login::LoginUseCase, signup::SignupUseCase,
+        start_passkey_authentication::StartPasskeyAuthenticationUseCase,
         start_passkey_registration::StartPasskeyRegistrationUseCase,
         start_totp_registration::StartTOTPRegistrationUseCase,
     },
@@ -44,6 +45,7 @@ pub struct AuthComponent {
     finish_passkey_registration_usecase: Arc<FinishPasskeyRegistrationUseCase>,
     start_passkey_authentication_usecase: Arc<StartPasskeyAuthenticationUseCase>,
     finish_passkey_authentication_usecase: Arc<FinishPasskeyAuthenticationUseCase>,
+    get_jwks_usecase: Arc<GetJwksUseCase>,
 }
 
 impl AuthComponent {
@@ -93,6 +95,7 @@ impl AuthComponent {
             finish_passkey_authentication_usecase: Arc::new(
                 FinishPasskeyAuthenticationUseCase::new(user_repository, hsm_store, webauthn),
             ),
+            get_jwks_usecase: Arc::new(GetJwksUseCase::new(jwt_auth)),
         }
     }
 }
@@ -153,5 +156,9 @@ impl auth::Component for AuthComponent {
         self.finish_passkey_authentication_usecase
             .execute(input)
             .await
+    }
+
+    async fn get_jwks(&self) -> Result<String, AuthError> {
+        self.get_jwks_usecase.execute().await
     }
 }

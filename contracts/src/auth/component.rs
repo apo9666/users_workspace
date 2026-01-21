@@ -35,4 +35,6 @@ pub trait Component {
         &self,
         input: passkey::PasskeyFinishAuthenticationInput,
     ) -> Result<(), AuthError>;
+
+    async fn get_jwks(&self) -> Result<String, AuthError>;
 }

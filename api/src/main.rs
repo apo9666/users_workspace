@@ -7,7 +7,7 @@ use actix_web::{
     dev::{ServiceRequest, ServiceResponse},
     http,
     middleware::{Logger, Next, from_fn},
-    post, web,
+    get, post, web,
 };
 use actix_web_httpauth::extractors::bearer::{self, BearerAuth};
 use actix_web_validator::Json;
@@ -76,6 +76,21 @@ async fn login(data: web::Data<AppState>, body: Json<LoginRequest>) -> impl Resp
             info!("Login error: {}", e);
             HttpResponse::Unauthorized().json(ErrorResponse {
                 message: "Usuário ou senha inválidos".to_string(),
+            })
+        }
+    }
+}
+
+#[get("/.well-known/jwks.json")]
+async fn jwks(data: web::Data<AppState>) -> impl Responder {
+    match data.auth.get_jwks().await {
+        Ok(jwks_json) => HttpResponse::Ok()
+            .content_type("application/json")
+            .body(jwks_json),
+        Err(e) => {
+            info!("Jwks fetch error: {}", e);
+            HttpResponse::InternalServerError().json(ErrorResponse {
+                message: "Erro ao buscar JWKS".to_string(),
             })
         }
     }
@@ -248,6 +263,7 @@ async fn main() -> std::io::Result<()> {
             )
             .service(greet)
             .service(login)
+            .service(jwks)
             .service(totp_registration_start)
             .service(totp_registration_finish)
     })

@@ -78,6 +78,9 @@ pub enum AuthError {
     #[error("Token validation failed.")]
     TokenValidationFailed,
 
+    #[error("Failed to fetch JWKS.")]
+    JwksFetchFailed,
+
     #[error("User not found.")]
     UserNotFound,
 
