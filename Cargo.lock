@@ -329,6 +329,7 @@ dependencies = [
  "auth",
  "contracts",
  "env_logger",
+ "jsonwebtoken",
  "log",
  "serde",
  "serde_json",

@@ -5,9 +5,9 @@ use actix_web::{
     App, Error, HttpMessage, HttpResponse, HttpServer, Responder,
     body::{EitherBody, MessageBody},
     dev::{ServiceRequest, ServiceResponse},
-    http,
+    get, http,
     middleware::{Logger, Next, from_fn},
-    get, post, web,
+    post, web,
 };
 use actix_web_httpauth::extractors::bearer::{self, BearerAuth};
 use actix_web_validator::Json;
@@ -24,8 +24,10 @@ use contracts::auth::{
     totp::{TOTPFinishRegistrationInput, TOTPStartRegistrationInput},
 };
 use env_logger::{Env, init_from_env};
+use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header, jwk::JwkSet};
 use log::info;
 use serde::{Deserialize, Serialize};
+use webauthn_rs::prelude::Uuid;
 
 #[post("/signup")]
 async fn greet(data: web::Data<AppState>, body: Json<SignupRequest>) -> impl Responder {
@@ -181,8 +183,6 @@ async fn protected_mfa_registration_route(
     req: ServiceRequest,
     next: Next<impl MessageBody>,
 ) -> Result<ServiceResponse<EitherBody<impl MessageBody>>, Error> {
-    // Alterado aqui
-
     let data = req
         .app_data::<web::Data<AppState>>()
         .ok_or_else(|| actix_web::error::ErrorInternalServerError("AppState missing"))?;
@@ -193,7 +193,7 @@ async fn protected_mfa_registration_route(
     if let Some(auth_val) = auth_header {
         let token = auth_val.to_str().unwrap_or("").replace("Bearer ", "");
 
-        match data.auth.validate_token(&token, "mfa_registration").await {
+        match validate_mfa_registration_token(&data, &token).await {
             Ok(claims) => {
                 // SUCESSO: Usamos .map_into_left_body()
                 req.extensions_mut().insert(claims);
@@ -213,6 +213,40 @@ async fn protected_mfa_registration_route(
         let s_res = req.into_response(res);
         Ok(s_res.map_into_right_body())
     }
+}
+
+async fn validate_mfa_registration_token(
+    data: &web::Data<AppState>,
+    token: &str,
+) -> Result<Claims, String> {
+    let jwks_json = data
+        .auth
+        .get_jwks()
+        .await
+        .map_err(|err| format!("jwks fetch failed: {}", err))?;
+    let jwks_set: JwkSet =
+        serde_json::from_str(&jwks_json).map_err(|err| format!("invalid jwks: {}", err))?;
+
+    let header = decode_header(token).map_err(|err| format!("invalid token header: {}", err))?;
+    let kid = header
+        .kid
+        .ok_or_else(|| "missing kid in token header".to_string())?;
+    let jwk = jwks_set
+        .find(&kid)
+        .ok_or_else(|| format!("no matching jwk for kid {}", kid))?;
+    let decoding_key =
+        DecodingKey::from_jwk(jwk).map_err(|err| format!("invalid decoding key: {}", err))?;
+
+    let validation = Validation::new(Algorithm::EdDSA);
+    let claims = decode::<Claims>(token, &decoding_key, &validation)
+        .map_err(|err| format!("invalid token: {}", err))?
+        .claims;
+
+    if claims.token_type != "mfa_registration" {
+        return Err(format!("unexpected token type {}", claims.token_type));
+    }
+
+    Ok(claims)
 }
 
 struct AppState {

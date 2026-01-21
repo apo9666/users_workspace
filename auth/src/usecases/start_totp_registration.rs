@@ -39,9 +39,11 @@ impl StartTOTPRegistrationUseCase {
             .await
             .map_err(|_| AuthError::TokenValidationFailed)?;
 
+        let user_id = uuid::Uuid::parse_str(&claims.sub).map_err(|_| AuthError::UserNotFound)?;
+
         let Some(user) = self
             .user_repository
-            .find_username(claims.sub)
+            .find_id(user_id)
             .await
             .map_err(AuthError::FindUserError)?
         else {
