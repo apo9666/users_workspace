@@ -13,26 +13,29 @@ use actix_web_httpauth::extractors::bearer::{self, BearerAuth};
 use actix_web_validator::Json;
 use api_types::{
     error::ErrorResponse,
-    login::LoginRequest,
+    login::{LoginRequest, LoginResponse},
     signup::{SignupRequest, SignupResponse},
     totp::{TotpSetupResponse, TotpVerifyRequest, TotpVerifyResponse},
 };
-use application::{auth::Auth, domain::claims::Claims};
-use env_logger::{Env, init_from_env};
-use jwt_auth_tokens::JwtAuthTokens;
-use log::info;
-use memory::repository::user::MemoryUserRepository;
-use totp::Totp;
-use webauthn_rs::{
-    WebauthnBuilder,
-    prelude::{Url, Uuid},
+use contracts::auth::{
+    login::LoginInput,
+    passkey::PasskeyStartRegistrationInput,
+    signup::SignupInput,
+    totp::{TOTPFinishRegistrationInput, TOTPStartRegistrationInput},
 };
+use env_logger::{Env, init_from_env};
+use log::info;
+use serde::{Deserialize, Serialize};
 
 #[post("/signup")]
 async fn greet(data: web::Data<AppState>, body: Json<SignupRequest>) -> impl Responder {
     match data
         .auth
-        .signup(body.name.clone(), body.email.clone(), body.password.clone())
+        .signup(SignupInput {
+            name: body.name.clone(),
+            username: body.email.clone(),
+            password: body.password.clone(),
+        })
         .await
     {
         Ok(_) => HttpResponse::Ok().json(SignupResponse {}),
@@ -45,14 +48,30 @@ async fn greet(data: web::Data<AppState>, body: Json<SignupRequest>) -> impl Res
     }
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct LoginResult {
+    pub mfa_registration_token: Option<String>,
+    pub mfa_verification_token: Option<String>,
+    pub access_token: Option<String>,
+    pub refresh_token: Option<String>,
+}
+
 #[post("/login")]
 async fn login(data: web::Data<AppState>, body: Json<LoginRequest>) -> impl Responder {
     match data
         .auth
-        .login(body.email.clone(), body.password.clone())
+        .login(LoginInput {
+            username: body.email.clone(),
+            password: body.password.clone(),
+        })
         .await
     {
-        Ok(result) => HttpResponse::Ok().json(result),
+        Ok(result) => HttpResponse::Ok().json(LoginResponse {
+            mfa_registration_token: result.mfa_registration_token,
+            mfa_verification_token: result.mfa_verification_token,
+            access_token: result.access_token,
+            refresh_token: result.refresh_token,
+        }),
         Err(e) => {
             info!("Login error: {}", e);
             HttpResponse::Unauthorized().json(ErrorResponse {
@@ -66,11 +85,13 @@ async fn login(data: web::Data<AppState>, body: Json<LoginRequest>) -> impl Resp
 async fn totp_registration_start(data: web::Data<AppState>, auth: BearerAuth) -> impl Responder {
     match data
         .auth
-        .start_totp_registration(auth.token().to_string())
+        .start_totp_registration(TOTPStartRegistrationInput {
+            mfa_token: auth.token().to_string(),
+        })
         .await
     {
         Ok(result) => HttpResponse::Ok().json(TotpSetupResponse {
-            qr_code_url: result,
+            qr_code_url: result.auth_url,
         }),
         Err(e) => {
             info!("Totp registration start error: {}", e);
@@ -89,12 +110,15 @@ async fn totp_registration_finish(
 ) -> impl Responder {
     match data
         .auth
-        .finish_totp_registration(auth.token().to_string(), body.code.clone())
+        .finish_totp_registration(TOTPFinishRegistrationInput {
+            mfa_token: auth.token().to_string(),
+            code: body.code.clone(),
+        })
         .await
     {
-        Ok((refresh_token, access_token)) => HttpResponse::Ok().json(TotpVerifyResponse {
-            refresh_token,
-            access_token,
+        Ok(output) => HttpResponse::Ok().json(TotpVerifyResponse {
+            refresh_token: output.refresh_token,
+            access_token: output.access_token,
         }),
         Err(e) => {
             info!("Totp registration finish error: {}", e);
@@ -105,47 +129,34 @@ async fn totp_registration_finish(
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Claims {
+    // aud: String, // Optional. Audience
+    pub exp: usize, // Required (validate_exp defaults to true in validation). Expiration time (as UTC timestamp)
+    // iat: usize, // Optional. Issued at (as UTC timestamp)
+    // iss: String, // Optional. Issuer
+    // nbf: usize,  // Optional. Not Before (as UTC timestamp)
+    pub sub: String, // Optional. Subject (whom token refers to)
+    pub token_type: String,
+}
+
 #[post("/webauthn/start")]
 async fn webauthn_registration_start(
     data: web::Data<AppState>,
-    auth: BearerAuth,
     claims: web::ReqData<Claims>,
 ) -> impl Responder {
     match data
         .auth
-        .start_passkey_registration(Uuid::from_str(&claims.sub).unwrap())
+        .start_passkey_registration(PasskeyStartRegistrationInput {
+            user_id: Uuid::from_str(&claims.sub).unwrap(),
+        })
         .await
     {
-        Ok(result) => HttpResponse::Ok().body(result),
+        Ok(result) => HttpResponse::Ok().body(result.challenge),
         Err(e) => {
             info!("Webauthn registration start error: {}", e);
             HttpResponse::BadRequest().json(ErrorResponse {
                 message: "Erro ao iniciar registro TOTP".to_string(),
-            })
-        }
-    }
-}
-
-#[post("/mfa/totp/verify")]
-async fn totp_verify(
-    data: web::Data<AppState>,
-    auth: BearerAuth,
-    body: Json<TotpVerifyRequest>,
-) -> impl Responder {
-    info!("{}", auth.token());
-
-    match data
-        .auth
-        .start_totp_registration(auth.token().to_string())
-        .await
-    {
-        Ok(result) => web::Json(TotpSetupResponse {
-            qr_code_url: result,
-        }),
-        Err(e) => {
-            info!("Totp setup error: {}", e);
-            web::Json(TotpSetupResponse {
-                qr_code_url: "deu ruim".to_string(),
             })
         }
     }
@@ -190,31 +201,14 @@ async fn protected_mfa_registration_route(
 }
 
 struct AppState {
-    auth: Arc<Auth>,
+    auth: Arc<dyn contracts::auth::Component>,
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     init_from_env(Env::default().default_filter_or("info"));
 
-    let credential_repository = Arc::new(MemoryUserRepository::new());
-    let jwt_auth = Arc::new(JwtAuthTokens {});
-    let totp = Arc::new(Totp {});
-    let hsm_store = Arc::new(memory::hsm_store::MemoryHsmStore::new());
-    let webauthn = Arc::new(
-        WebauthnBuilder::new("localhost", &Url::parse("http://localhost:3000").unwrap())
-            .unwrap()
-            .build()
-            .unwrap(),
-    );
-
-    let auth = Arc::new(Auth::new(
-        credential_repository.clone(),
-        jwt_auth.clone(),
-        totp.clone(),
-        hsm_store.clone(),
-        webauthn.clone(),
-    ));
+    let auth = Arc::new(auth::AuthComponent::new());
 
     HttpServer::new(move || {
         let cors = Cors::default()

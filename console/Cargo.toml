@@ -4,10 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-memory = { path = "../memory" }
-jwt_auth_tokens = { path = "../jwt_auth_tokens" }
-totp = { path = "../totp" }
-application = { path = "../application" }
+contracts = { path = "../contracts" }
+auth = { path = "../auth" }
 tokio = { version = "1.48.0", features = ["full"] }
 env_logger = "0.11.8"
 webauthn-rs = { version ="0.5.3", features = ["danger-allow-state-serialisation"] }
