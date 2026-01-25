@@ -46,8 +46,16 @@ impl LoginUseCase {
             .duration_since(UNIX_EPOCH)
             .expect("time should go forward");
 
+        let mut allowed_methods: Vec<String> = Vec::new();
         if credential.otp_secret.is_some() {
-            let exp = (since_the_epoch.as_secs() + 600) as usize; // 10 minutes from now
+            allowed_methods.push("otp".to_string());
+        }
+        if !credential.pass_keys.is_empty() {
+            allowed_methods.push("passkey".to_string());
+        }
+
+        if !allowed_methods.is_empty() {
+            let exp = (since_the_epoch.as_secs() + 300) as usize; // 5 minutes from now
             let mfa_token = self
                 .for_auth_tokens
                 .create_token(Claims {
@@ -59,57 +67,40 @@ impl LoginUseCase {
                 .map_err(|_| AuthError::MFATokenCreationFailed)?;
 
             return Ok(LoginOutput {
-                mfa_registration_token: None,
                 mfa_verification_token: Some(mfa_token),
                 access_token: None,
                 refresh_token: None,
+                allowed_methods: Some(allowed_methods),
             });
         } else {
-            let exp = (since_the_epoch.as_secs() + 3600) as usize; // 1h from now
-            let mfa_token = self
+            let exp = (since_the_epoch.as_secs() + 604800) as usize; // 7 days from now
+            let refresh_token = self
                 .for_auth_tokens
                 .create_token(Claims {
-                    token_type: "mfa_registration".to_string(),
+                    token_type: "refresh".to_string(),
                     sub: credential.id.to_string(),
                     exp,
                 })
                 .await
-                .map_err(|_| AuthError::MFATokenCreationFailed)?;
+                .map_err(|_| AuthError::RefreshTokenCreationFailed)?;
+
+            let exp = (since_the_epoch.as_secs() + 600) as usize; // 10 minutes from now
+            let access_token = self
+                .for_auth_tokens
+                .create_token(Claims {
+                    token_type: "access".to_string(),
+                    sub: credential.id.to_string(),
+                    exp,
+                })
+                .await
+                .map_err(|_| AuthError::AccessTokenCreationFailed)?;
 
             return Ok(LoginOutput {
-                mfa_registration_token: Some(mfa_token),
                 mfa_verification_token: None,
-                access_token: None,
-                refresh_token: None,
+                access_token: Some(access_token),
+                refresh_token: Some(refresh_token),
+                allowed_methods: None,
             });
         }
-
-        // let exp = (since_the_epoch.as_secs() + 604800) as usize; // 7 days from now
-        // let refresh_token = self
-        //     .for_auth_tokens
-        //     .create_token(Claims {
-        //         token_type: "refresh".to_string(),
-        //         sub: username.clone(),
-        //         exp,
-        //     })
-        //     .await
-        //     .map_err(|_| AuthError::RefreshTokenCreationFailed)?;
-
-        // let exp = (since_the_epoch.as_secs() + 600) as usize; // 10 minutes from now
-        // let access_token = self
-        //     .for_auth_tokens
-        //     .create_token(Claims {
-        //         token_type: "access".to_string(),
-        //         sub: username.clone(),
-        //         exp,
-        //     })
-        //     .await
-        //     .map_err(|_| AuthError::AccessTokenCreationFailed)?;
-
-        // return Ok(LoginOutput {
-        //     mfa_token: None,
-        //     access_token: Some(access_token),
-        //     refresh_token: Some(refresh_token),
-        // });
     }
 }

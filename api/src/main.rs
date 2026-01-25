@@ -69,10 +69,10 @@ async fn login(data: web::Data<AppState>, body: Json<LoginRequest>) -> impl Resp
         .await
     {
         Ok(result) => HttpResponse::Ok().json(LoginResponse {
-            mfa_registration_token: result.mfa_registration_token,
             mfa_verification_token: result.mfa_verification_token,
             access_token: result.access_token,
             refresh_token: result.refresh_token,
+            allowed_methods: result.allowed_methods,
         }),
         Err(e) => {
             info!("Login error: {}", e);
