@@ -14,11 +14,13 @@ use actix_web_validator::Json;
 use api_types::{
     error::ErrorResponse,
     login::{LoginRequest, LoginResponse},
+    mfa::MfaRegistrationResponse,
     signup::{SignupRequest, SignupResponse},
     totp::{TotpSetupResponse, TotpVerifyRequest, TotpVerifyResponse},
 };
 use contracts::auth::{
     login::LoginInput,
+    mfa::MfaRegistrationInput,
     passkey::PasskeyStartRegistrationInput,
     signup::SignupInput,
     totp::{TOTPFinishRegistrationInput, TOTPStartRegistrationInput},
@@ -93,6 +95,29 @@ async fn jwks(data: web::Data<AppState>) -> impl Responder {
             info!("Jwks fetch error: {}", e);
             HttpResponse::InternalServerError().json(ErrorResponse {
                 message: "Erro ao buscar JWKS".to_string(),
+            })
+        }
+    }
+}
+
+#[get("/mfa")]
+async fn mfa_registration(data: web::Data<AppState>, auth: BearerAuth) -> impl Responder {
+    match data
+        .auth
+        .get_mfa_registration(MfaRegistrationInput {
+            access_token: auth.token().to_string(),
+        })
+        .await
+    {
+        Ok(output) => HttpResponse::Ok().json(MfaRegistrationResponse {
+            mfa_registration: output.mfa_registration,
+            allowed_methods: output.allowed_methods,
+            expires_in: output.expires_in,
+        }),
+        Err(e) => {
+            info!("MFA registration error: {}", e);
+            HttpResponse::Unauthorized().json(ErrorResponse {
+                message: "Acesso nao autorizado".to_string(),
             })
         }
     }
@@ -297,6 +322,7 @@ async fn main() -> std::io::Result<()> {
             )
             .service(greet)
             .service(login)
+            .service(mfa_registration)
             .service(jwks)
             .service(totp_registration_start)
             .service(totp_registration_finish)

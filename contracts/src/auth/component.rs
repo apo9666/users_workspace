@@ -1,4 +1,4 @@
-use crate::auth::{error::AuthError, login, passkey, signup, totp};
+use crate::auth::{error::AuthError, login, mfa, passkey, signup, totp};
 
 #[async_trait::async_trait]
 pub trait Component {
@@ -35,6 +35,11 @@ pub trait Component {
         &self,
         input: passkey::PasskeyFinishAuthenticationInput,
     ) -> Result<(), AuthError>;
+
+    async fn get_mfa_registration(
+        &self,
+        input: mfa::MfaRegistrationInput,
+    ) -> Result<mfa::MfaRegistrationOutput, AuthError>;
 
     async fn get_jwks(&self) -> Result<String, AuthError>;
 }

@@ -1,5 +1,6 @@
 pub mod error;
 pub mod login;
+pub mod mfa;
 pub mod signup;
 pub mod totp;
 pub mod webauthn;

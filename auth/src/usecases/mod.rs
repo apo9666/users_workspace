@@ -1,6 +1,7 @@
 pub mod finish_passkey_authentication;
 pub mod finish_passkey_registration;
 pub mod finish_totp_registration;
+pub mod get_mfa_registration;
 pub mod get_jwks;
 pub mod login;
 pub mod signup;
