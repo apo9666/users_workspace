@@ -628,6 +628,7 @@ dependencies = [
  "contracts",
  "env_logger",
  "tokio",
+ "totp-rs",
  "webauthn-rs",
 ]
 

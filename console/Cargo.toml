@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 contracts = { path = "../contracts" }
 auth = { path = "../auth" }
-tokio = { version = "1.48.0", features = ["full"] }
 env_logger = "0.11.8"
+tokio = { version = "1.48.0", features = ["full"] }
+totp-rs = "5.7.0"
 webauthn-rs = { version ="0.5.3", features = ["danger-allow-state-serialisation"] }
